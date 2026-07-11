@@ -1,0 +1,35 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`prompts > is stable for a given product (snapshot) 1`] = `
+"Analyze the claims in the following product listing.
+
+Return ONLY a single JSON object, with no markdown fences or commentary, matching exactly this schema:
+
+{
+  "overall_assessment": "one or two sentence neutral summary of how well the listing's claims are supported",
+  "credibility_score": 0-100 integer (higher = better supported claims),
+  "marketing_hype": "Low" | "Medium" | "High",
+  "unsupported_claims": [{ "claim": "...", "reasoning": "why it lacks support" }],
+  "scientific_claims": [{ "claim": "...", "reasoning": "what evidence would be needed" }],
+  "missing_evidence": ["specific evidence a buyer would want but the listing omits"],
+  "good_signs": ["concrete, verifiable, or appropriately-hedged statements"],
+  "summary": "a short plain-language wrap-up for the shopper"
+}
+
+Product listing (structured data extracted from the page):
+
+{
+  "website": "Amazon",
+  "title": "QuantumGlow Serum",
+  "brand": "QuantumGlow",
+  "price": "$29.99",
+  "category": null,
+  "description": null,
+  "bullets": [
+    "Reduces wrinkles by 300%"
+  ],
+  "specifications": {
+    "Volume": "30 ml"
+  }
+}"
+`;

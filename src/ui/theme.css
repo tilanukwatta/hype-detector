@@ -1,0 +1,140 @@
+/* Design tokens + base styles shared by popup, side panel, and options.
+   Theme is controlled by `data-theme` on <html> (set from user settings), with
+   a `prefers-color-scheme` fallback for `theme: "system"`. High-contrast mode is
+   toggled via `data-contrast="high"`. */
+
+:root {
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  --bg: #ffffff;
+  --bg-subtle: #f4f5f7;
+  --surface: #ffffff;
+  --border: #e2e5ea;
+  --text: #1b1f24;
+  --text-muted: #5b6470;
+  --accent: #2f6feb;
+  --accent-text: #ffffff;
+
+  --good: #1a7f47;
+  --good-bg: #e7f4ec;
+  --warn: #b25e00;
+  --warn-bg: #fbeeda;
+  --danger: #b02a37;
+  --danger-bg: #fbe7e9;
+  --star: #e0a800;
+
+  --radius: 10px;
+  --space: 12px;
+}
+
+:root[data-theme='dark'] {
+  --bg: #14171c;
+  --bg-subtle: #1b1f26;
+  --surface: #1e232b;
+  --border: #2d333d;
+  --text: #e6e9ee;
+  --text-muted: #9aa4b2;
+  --accent: #5b8dff;
+  --accent-text: #0b0e12;
+
+  --good: #4cc38a;
+  --good-bg: #133227;
+  --warn: #e0a34a;
+  --warn-bg: #362713;
+  --danger: #f2848d;
+  --danger-bg: #3a1d20;
+  --star: #f5c518;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #14171c;
+    --bg-subtle: #1b1f26;
+    --surface: #1e232b;
+    --border: #2d333d;
+    --text: #e6e9ee;
+    --text-muted: #9aa4b2;
+    --accent: #5b8dff;
+    --accent-text: #0b0e12;
+    --good: #4cc38a;
+    --good-bg: #133227;
+    --warn: #e0a34a;
+    --warn-bg: #362713;
+    --danger: #f2848d;
+    --danger-bg: #3a1d20;
+    --star: #f5c518;
+  }
+}
+
+:root[data-contrast='high'] {
+  --border: currentColor;
+  --text-muted: var(--text);
+  --accent: #0038a8;
+}
+:root[data-contrast='high'][data-theme='dark'] {
+  --accent: #9cc0ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.25;
+}
+
+a {
+  color: var(--accent);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 14px;
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space);
+}
