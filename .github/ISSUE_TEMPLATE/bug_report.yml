@@ -1,0 +1,65 @@
+name: Bug report
+description: Something isn't working as expected.
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug! Please do **not** paste your API key anywhere in this report.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected instead.
+      placeholder: When I click Analyze on an Amazon page, …
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to '…'
+        2. Click '…'
+        3. See error
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Edge
+        - Brave
+        - Other (note in description)
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: LLM provider
+      options:
+        - OpenAI
+        - Anthropic
+        - Google Gemini
+        - OpenRouter
+        - Ollama (local)
+        - Not applicable
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Extension version
+      description: Shown on the extensions page (e.g. 0.1.0).
+    validations:
+      required: false
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors
+      description: Relevant errors from the extension's DevTools console, if any. Redact anything sensitive.
+      render: shell
+    validations:
+      required: false

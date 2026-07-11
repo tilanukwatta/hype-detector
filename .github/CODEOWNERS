@@ -1,0 +1,10 @@
+# Code owners are automatically requested for review on matching PRs.
+# Replace the placeholder below with your GitHub username (or a team like @org/maintainers).
+# See: https://docs.github.com/articles/about-code-owners
+
+# Default owner for everything in the repo:
+* @tilanukwatta
+
+# Examples of narrowing ownership as the project grows:
+# /src/providers/  @tilanukwatta
+# /src/extraction/ @tilanukwatta

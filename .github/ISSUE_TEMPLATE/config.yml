@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/tilanukwatta/hype-detector/discussions
+    about: Ask questions, share ideas, or discuss usage here instead of opening an issue.
