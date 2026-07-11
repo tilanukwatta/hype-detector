@@ -1,0 +1,36 @@
+name: Release
+
+# Tag a release to publish a store-ready package:
+#   npm version patch    # bumps package.json + creates a vX.Y.Z tag
+#   git push --follow-tags
+# This builds, zips ./dist, and attaches the zip to a GitHub Release.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run zip
+      - name: Create GitHub Release with the packaged extension
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            web-ext-artifacts/*.zip \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes
