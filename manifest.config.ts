@@ -36,7 +36,7 @@ export default defineManifest({
   },
   options_page: 'src/options/index.html',
   background: {
-    service_worker: 'src/background/index.ts',
+    service_worker: 'src/background/service-worker.ts',
     type: 'module',
   },
   content_scripts: [
@@ -48,7 +48,7 @@ export default defineManifest({
         'https://www.amazon.de/*',
         'https://www.amazon.com.au/*',
       ],
-      js: ['src/content/index.ts'],
+      js: ['src/content/content-script.ts'],
       run_at: 'document_idle',
     },
   ],
