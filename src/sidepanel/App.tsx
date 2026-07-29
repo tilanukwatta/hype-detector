@@ -41,17 +41,14 @@ export function App() {
     }
 
     const outcome = await requestProduct(tab.id);
-    if (!outcome) {
+    if (!outcome.ok) {
+      const hint =
+        outcome.reason === 'no-content-script' ? ' Try reloading the page, then Re-analyze.' : '';
       setState({
         phase: 'notice',
-        tone: 'info',
-        message:
-          'Could not read this page. Open a supported product page (Amazon); if it was already open, reload it and try again.',
+        tone: outcome.reason === 'no-content-script' ? 'error' : 'info',
+        message: outcome.message + hint,
       });
-      return;
-    }
-    if (!outcome.ok) {
-      setState({ phase: 'notice', tone: 'info', message: outcome.message });
       return;
     }
 

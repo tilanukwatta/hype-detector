@@ -49,7 +49,7 @@ describe('requestProduct', () => {
     expect(out).toMatchObject({ ok: false, reason: 'not-product-page' });
   });
 
-  it('returns null when injection is not permitted', async () => {
+  it('surfaces the real error when injection is not permitted', async () => {
     chrome.tabs.sendMessage = makeSendMessage([
       { lastError: { message: 'Could not establish connection' } },
     ]) as never;
@@ -57,6 +57,19 @@ describe('requestProduct', () => {
       throw new Error('Cannot access contents of the page');
     }) as never;
 
-    expect(await requestProduct(1)).toBeNull();
+    const out = await requestProduct(1);
+    expect(out).toMatchObject({ ok: false, reason: 'no-content-script' });
+    if (!out.ok) expect(out.message).toMatch(/Cannot access contents of the page/);
+  });
+
+  it('reports when injection succeeds but the reader stays silent', async () => {
+    chrome.tabs.sendMessage = makeSendMessage([
+      { lastError: { message: 'no receiver' } },
+      { lastError: { message: 'still no receiver' } },
+    ]) as never;
+
+    const out = await requestProduct(1);
+    expect(out).toMatchObject({ ok: false, reason: 'no-content-script' });
+    if (!out.ok) expect(out.message).toMatch(/did not respond/);
   });
 });

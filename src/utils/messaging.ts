@@ -45,17 +45,30 @@ export function sendToTab<T extends ExtensionMessage>(
  * Returns null only when the tab genuinely has no reachable content script
  * (e.g. a restricted page the extension has no host access to).
  */
-export async function requestProduct(tabId: number): Promise<ExtractionOutcome | null> {
+export async function requestProduct(tabId: number): Promise<ExtractionOutcome> {
   const first = await sendToTab(tabId, { type: 'GET_PRODUCT' });
   if (first) return first;
 
   const files = chrome.runtime.getManifest().content_scripts?.[0]?.js ?? [];
-  if (files.length === 0) return null;
+  if (files.length === 0) {
+    return noReader('The page reader is missing from this build.');
+  }
 
+  // The content script may not be present (e.g. the tab predates the extension
+  // load). Inject it on demand, then retry. Surface the real error so failures
+  // are diagnosable rather than a silent "nothing happened".
   try {
     await chrome.scripting.executeScript({ target: { tabId }, files });
-  } catch {
-    return null; // No host access to this tab.
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return noReader(`Could not load the page reader — ${detail}`);
   }
-  return sendToTab(tabId, { type: 'GET_PRODUCT' });
+
+  const second = await sendToTab(tabId, { type: 'GET_PRODUCT' });
+  if (second) return second;
+  return noReader('The page reader was injected but did not respond.');
+}
+
+function noReader(message: string): ExtractionOutcome {
+  return { ok: false, reason: 'no-content-script', message };
 }
