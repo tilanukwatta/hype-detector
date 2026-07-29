@@ -24,7 +24,21 @@ export function App() {
       return;
     }
     try {
-      await chrome.sidePanel.open({ tabId: tab.id });
+      // Open the side panel first, while we still hold the toolbar-click gesture.
+      const opening = chrome.sidePanel.open({ tabId: tab.id });
+
+      // Inject the page reader now, using the activeTab access granted by the
+      // toolbar click. This is the most reliable moment to do it, and covers
+      // tabs that were already open before the extension was loaded (Chrome
+      // does not auto-inject content scripts into those). The content script is
+      // idempotent, so this is safe even if it is already present. Best-effort:
+      // if it fails, the side panel falls back to injecting it itself.
+      const files = chrome.runtime.getManifest().content_scripts?.[0]?.js ?? [];
+      if (files.length > 0) {
+        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files }).catch(() => {});
+      }
+
+      await opening;
       window.close();
     } catch {
       setError('Could not open the side panel. Please try again.');
