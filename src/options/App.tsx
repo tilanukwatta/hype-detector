@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ProviderId, Settings } from '@/types';
-import { PROVIDER_LIST, getProvider } from '@/providers';
+import { PROVIDER_LIST, getProvider, type ValidationResult } from '@/providers';
 import { loadSettings, saveSettings, clearCache } from '@/utils/storage';
 import { useApplyTheme } from '@/ui/hooks';
 
@@ -9,6 +9,8 @@ const FIELD_STYLE = { display: 'grid', gap: '4px' } as const;
 export function App() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState<ValidationResult | null>(null);
 
   useEffect(() => {
     void loadSettings().then(setSettings);
@@ -19,16 +21,32 @@ export function App() {
   if (!settings) return <main style={{ padding: 24 }}>Loading…</main>;
 
   const provider = getProvider(settings.provider);
+  const missingKey = provider.requiresApiKey && !settings.apiKey.trim();
 
   function update<K extends keyof Settings>(key: K, value: Settings[K]) {
     setSettings((s) => (s ? { ...s, [key]: value } : s));
     setStatus(null);
+    setCheckResult(null);
   }
 
   function changeProvider(id: ProviderId) {
     const next = getProvider(id);
     setSettings((s) => (s ? { ...s, provider: id, model: next.suggestedModels[0] ?? s.model } : s));
     setStatus(null);
+    setCheckResult(null);
+  }
+
+  async function testConnection() {
+    if (!settings) return;
+    setChecking(true);
+    setCheckResult(null);
+    try {
+      setCheckResult(await getProvider(settings.provider).validate(settings));
+    } catch {
+      setCheckResult({ ok: false, message: 'The connection test failed unexpectedly.' });
+    } finally {
+      setChecking(false);
+    }
   }
 
   async function save(e: React.FormEvent) {
@@ -152,9 +170,18 @@ export function App() {
           </label>
         </div>
 
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <button type="submit" className="btn">
             Save settings
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={testConnection}
+            disabled={checking || missingKey}
+            title={missingKey ? 'Enter an API key first' : undefined}
+          >
+            {checking ? 'Testing…' : 'Test connection'}
           </button>
           <button
             type="button"
@@ -169,6 +196,20 @@ export function App() {
             </span>
           )}
         </div>
+
+        {checkResult && (
+          <div
+            className="card"
+            role={checkResult.ok ? 'status' : 'alert'}
+            style={{
+              borderColor: checkResult.ok ? 'var(--good)' : 'var(--danger)',
+              color: checkResult.ok ? 'var(--good)' : 'var(--danger)',
+            }}
+          >
+            {checkResult.ok ? '✓ ' : '✗ '}
+            {checkResult.message}
+          </div>
+        )}
       </form>
     </main>
   );

@@ -45,6 +45,9 @@ function createChromeStub() {
       query: vi.fn(),
       sendMessage: vi.fn(),
     },
+    scripting: {
+      executeScript: vi.fn(async () => []),
+    },
     sidePanel: {
       open: vi.fn(),
       setPanelBehavior: vi.fn(),

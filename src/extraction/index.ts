@@ -21,7 +21,7 @@ export interface ExtractionSuccess {
 export interface ExtractionFailure {
   ok: false;
   /** Machine-readable reason so the UI can show tailored guidance. */
-  reason: 'unsupported-site' | 'not-product-page' | 'extraction-failed';
+  reason: 'unsupported-site' | 'not-product-page' | 'extraction-failed' | 'no-content-script';
   message: string;
 }
 export type ExtractionOutcome = ExtractionSuccess | ExtractionFailure;

@@ -36,7 +36,7 @@ export default defineManifest({
   },
   options_page: 'src/options/index.html',
   background: {
-    service_worker: 'src/background/index.ts',
+    service_worker: 'src/background/service-worker.ts',
     type: 'module',
   },
   content_scripts: [
@@ -48,12 +48,20 @@ export default defineManifest({
         'https://www.amazon.de/*',
         'https://www.amazon.com.au/*',
       ],
-      js: ['src/content/index.ts'],
+      js: ['src/content/content-script.ts'],
       run_at: 'document_idle',
     },
   ],
   permissions: ['storage', 'activeTab', 'sidePanel', 'scripting'],
   host_permissions: [
+    // Shopping sites — needed so the side panel can inject the extractor on
+    // demand (e.g. into tabs that were already open before the extension loaded).
+    'https://www.amazon.com/*',
+    'https://www.amazon.co.uk/*',
+    'https://www.amazon.ca/*',
+    'https://www.amazon.de/*',
+    'https://www.amazon.com.au/*',
+    // LLM provider endpoints (contacted only when you run an analysis).
     'https://api.openai.com/*',
     'https://api.anthropic.com/*',
     'https://generativelanguage.googleapis.com/*',

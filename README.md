@@ -70,6 +70,7 @@ Options choose the **Ollama (local)** provider. The default endpoint is
 | ------------------- | ------------------------------------------- |
 | `npm run dev`       | Vite dev server with HMR                    |
 | `npm run build`     | Type-check and build the unpacked extension |
+| `npm run zip`       | Build and package a store-ready `.zip`      |
 | `npm test`          | Run the Vitest test suite                   |
 | `npm run typecheck` | Type-check only                             |
 | `npm run lint`      | ESLint                                      |
@@ -99,7 +100,20 @@ Adding a new provider or shopping site is a self-contained change — see
 
 Hype Detector has no server. Your API key is stored with the browser's extension storage
 and is sent only to the provider you configure. There is no analytics, tracking,
-telemetry, cookies, or remote logging.
+telemetry, cookies, or remote logging. See the full [Privacy Policy](./PRIVACY.md).
+
+## Releasing
+
+Publishing a new version (for maintainers):
+
+```bash
+npm version patch      # bumps package.json and creates a vX.Y.Z tag
+git push --follow-tags # the Release workflow builds, zips, and attaches it to a GitHub Release
+```
+
+Download the `.zip` from the resulting GitHub Release and upload it to the
+[Chrome Web Store](https://chrome.google.com/webstore/devconsole) and
+[Edge Add-ons](https://partner.microsoft.com/dashboard/microsoftedge).
 
 ## License
 
