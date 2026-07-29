@@ -3,7 +3,7 @@ import type { Analysis, Product, Settings } from '@/types';
 import { analyzeProduct } from '@/analyze';
 import { getProvider } from '@/providers';
 import { hashProduct } from '@/utils/cache';
-import { getActiveTab, sendToTab } from '@/utils/messaging';
+import { getActiveTab, requestProduct } from '@/utils/messaging';
 import { getCachedAnalysis, putCachedAnalysis } from '@/utils/storage';
 import { AnalysisView } from '@/ui/AnalysisView';
 import { useApplyTheme, useSettings } from '@/ui/hooks';
@@ -40,17 +40,15 @@ export function App() {
       return;
     }
 
-    const outcome = await sendToTab(tab.id, { type: 'GET_PRODUCT' });
-    if (!outcome) {
+    const outcome = await requestProduct(tab.id);
+    if (!outcome.ok) {
+      const hint =
+        outcome.reason === 'no-content-script' ? ' Try reloading the page, then Re-analyze.' : '';
       setState({
         phase: 'notice',
-        tone: 'info',
-        message: 'Open a supported product page (Amazon) and try again.',
+        tone: outcome.reason === 'no-content-script' ? 'error' : 'info',
+        message: outcome.message + hint,
       });
-      return;
-    }
-    if (!outcome.ok) {
-      setState({ phase: 'notice', tone: 'info', message: outcome.message });
       return;
     }
 
