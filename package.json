@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "zip": "npm run build && node scripts/package.mjs",
+    "icons": "node scripts/generate-icons.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
