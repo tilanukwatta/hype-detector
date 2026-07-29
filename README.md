@@ -29,17 +29,27 @@ missing evidence — and explains its reasoning so you can decide for yourself.
 The extension only analyzes when you click **Analyze** — it never runs automatically on
 every page, and results are cached locally until the page content changes.
 
-## Install (from source)
+## Install
 
-> There is no store listing yet, so for now you build the extension and load it
-> unpacked. It's a one-time setup that takes a couple of minutes.
+There is no web-store listing yet, so installation currently requires turning on your
+browser's **Developer mode**. Pick one of the two options below to get the extension files,
+then continue to [Add your API key](#add-your-api-key).
 
-### Prerequisites
+A Chromium browser is required: **Chrome**, **Edge**, or **Brave**.
 
-- **Node.js 22+** and npm (needed only to build — a future store install won't require this).
-- A Chromium browser: **Chrome**, **Edge**, or **Brave**.
+### Option A — Download a prebuilt release (no build needed)
 
-### 1. Build the extension
+1. Go to the [**Releases**](https://github.com/tilanukwatta/hype-detector/releases/latest)
+   page and download the latest `hype-detector-vX.Y.Z.zip`.
+2. Unzip it into a folder you'll keep (deleting the folder later uninstalls the extension).
+3. Open your extensions page — `chrome://extensions` (Edge: `edge://extensions`, Brave:
+   `brave://extensions`) — turn on **Developer mode** (top-right), click **Load unpacked**
+   (top-left), and select the **unzipped folder**.
+4. _(Optional)_ Click the puzzle-piece icon in the toolbar and **pin** Hype Detector.
+
+### Option B — Build from source
+
+Requires **Node.js 22+** and npm.
 
 ```bash
 git clone https://github.com/tilanukwatta/hype-detector.git
@@ -48,16 +58,12 @@ npm install
 npm run build      # outputs the unpacked extension to ./dist
 ```
 
-### 2. Load it into your browser
-
-1. Open your extensions page: `chrome://extensions` (Edge: `edge://extensions`, Brave: `brave://extensions`).
-2. Turn on **Developer mode** (top-right toggle).
-3. Click **Load unpacked** (top-left) and select the **`dist`** folder created by the build.
-4. _(Optional)_ Click the puzzle-piece icon in the toolbar and **pin** Hype Detector so it stays visible.
+Then load it: open your extensions page, turn on **Developer mode**, click **Load unpacked**,
+and select the **`dist`** folder created by the build.
 
 The extension card should show no errors. (If it ever does, click **Clear all**, then reload.)
 
-### 3. Add your API key
+### Add your API key
 
 1. Click the **Hype Detector** toolbar icon → **Options**.
 2. Choose a **provider**, paste your **API key**, and set a **model**. Suggested pairings:
@@ -69,7 +75,7 @@ The extension card should show no errors. (If it ever does, click **Clear all**,
 
 Your API key is stored only on your device — see the [Privacy Policy](./PRIVACY.md).
 
-### 4. Analyze a product
+### Analyze a product
 
 1. Open an **Amazon product page** (a product detail page, e.g. `amazon.com/dp/...`).
 2. Click the toolbar icon → **Analyze this page**. The side panel opens with the credibility breakdown.
