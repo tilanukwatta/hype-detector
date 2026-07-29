@@ -157,3 +157,94 @@ describe('error handling', () => {
     ).rejects.toThrow(/Network request failed/);
   });
 });
+
+describe('validate', () => {
+  it('openai pings the selected model with a 1-token completion', async () => {
+    const fetchMock = mockFetch({ choices: [{ message: { content: 'x' } }] });
+    const result = await getProvider('openai').validate(
+      settingsFor({ provider: 'openai', model: 'gpt-4o-mini' })
+    );
+    const { url, init, body } = await lastCall(fetchMock);
+    expect(url).toBe('https://api.openai.com/v1/chat/completions');
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer test-key');
+    expect(body.model).toBe('gpt-4o-mini');
+    expect(body.max_tokens).toBe(1);
+    expect(result.ok).toBe(true);
+  });
+
+  it('gemini pings generateContent for the selected model', async () => {
+    const fetchMock = mockFetch({ candidates: [] });
+    const result = await getProvider('gemini').validate(
+      settingsFor({ provider: 'gemini', model: 'gemini-1.5-flash' })
+    );
+    const { url, body } = await lastCall(fetchMock);
+    expect(url).toContain('/models/gemini-1.5-flash:generateContent');
+    expect(url).toContain('key=test-key');
+    expect(body.generationConfig.maxOutputTokens).toBe(1);
+    expect(result.ok).toBe(true);
+  });
+
+  it('anthropic sends a 1-token ping and treats 200 as valid', async () => {
+    const fetchMock = mockFetch({ content: [] });
+    const result = await getProvider('anthropic').validate(settingsFor({ provider: 'anthropic' }));
+    const { url, body } = await lastCall(fetchMock);
+    expect(url).toBe('https://api.anthropic.com/v1/messages');
+    expect(body.max_tokens).toBe(1);
+    expect(result.ok).toBe(true);
+  });
+
+  it('reports an invalid key clearly (401)', async () => {
+    mockFetch({ error: { message: 'bad key' } }, { status: 401 });
+    const result = await getProvider('openai').validate(settingsFor({ provider: 'openai' }));
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/Invalid or unauthorized/);
+  });
+
+  it('flags a model the key cannot access (403) as denied, not a bad key', async () => {
+    mockFetch(
+      { error: { message: 'Project does not have access to model gpt-4o-mini' } },
+      { status: 403 }
+    );
+    const result = await getProvider('openai').validate(settingsFor({ provider: 'openai' }));
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/Access denied/);
+    expect(result.message).toMatch(/does not have access to model/);
+  });
+
+  it('treats 429 as a recognized (rate-limited) key/model', async () => {
+    mockFetch({}, { status: 429 });
+    const result = await getProvider('openai').validate(settingsFor({ provider: 'openai' }));
+    expect(result.ok).toBe(true);
+    expect(result.message).toMatch(/rate-limited/i);
+  });
+
+  it('reports unreachable providers without throwing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch');
+      })
+    );
+    const result = await getProvider('openai').validate(settingsFor({ provider: 'openai' }));
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/Could not reach/);
+  });
+
+  it('ollama warns when the configured model is not pulled', async () => {
+    mockFetch({ models: [{ name: 'mistral:latest' }] });
+    const result = await getProvider('ollama').validate(
+      settingsFor({ provider: 'ollama', apiKey: '', model: 'llama3.1' })
+    );
+    expect(result.ok).toBe(true);
+    expect(result.message).toMatch(/not pulled/);
+  });
+
+  it('ollama accepts a pulled model (matching the :tag form)', async () => {
+    mockFetch({ models: [{ name: 'llama3.1:latest' }] });
+    const result = await getProvider('ollama').validate(
+      settingsFor({ provider: 'ollama', apiKey: '', model: 'llama3.1' })
+    );
+    expect(result.ok).toBe(true);
+    expect(result.message).toMatch(/reachable/);
+  });
+});

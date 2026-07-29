@@ -1,4 +1,9 @@
-import { postJson, ProviderError, resolveBaseUrl, type LLMProvider } from './types';
+import { postJson, ProviderError, resolveBaseUrl, validationPing, type LLMProvider } from './types';
+
+const ANTHROPIC_HEADERS = {
+  'anthropic-version': '2023-06-01',
+  'anthropic-dangerous-direct-browser-access': 'true',
+};
 
 interface AnthropicResponse {
   content?: Array<{ type: string; text?: string }>;
@@ -35,11 +40,7 @@ export const anthropicProvider: LLMProvider = {
       {
         provider: this.id,
         signal: req.signal,
-        headers: {
-          'x-api-key': settings.apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
+        headers: { 'x-api-key': settings.apiKey, ...ANTHROPIC_HEADERS },
       }
     )) as AnthropicResponse;
 
@@ -52,5 +53,19 @@ export const anthropicProvider: LLMProvider = {
       throw new ProviderError('The model returned an empty response.', { provider: this.id });
     }
     return text;
+  },
+
+  // Anthropic has no cheap key-check endpoint, so send a 1-token message. This
+  // validates both the key and the selected model (a bad model returns 404).
+  validate(settings, signal) {
+    return validationPing(this.label, `${resolveBaseUrl(this, settings)}/messages`, {
+      signal,
+      headers: { 'x-api-key': settings.apiKey, ...ANTHROPIC_HEADERS },
+      body: {
+        model: settings.model,
+        max_tokens: 1,
+        messages: [{ role: 'user', content: 'ping' }],
+      },
+    });
   },
 };

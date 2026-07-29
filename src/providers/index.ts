@@ -29,4 +29,4 @@ export const PROVIDER_LIST: readonly LLMProvider[] = [
 ];
 
 export { ProviderError } from './types';
-export type { LLMProvider, CompletionRequest } from './types';
+export type { LLMProvider, CompletionRequest, ValidationResult } from './types';
