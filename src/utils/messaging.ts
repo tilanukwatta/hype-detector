@@ -35,3 +35,27 @@ export function sendToTab<T extends ExtensionMessage>(
     });
   });
 }
+
+/**
+ * Ask a tab for its extracted product. If the content script does not answer —
+ * which happens when the tab was already open before the extension was
+ * loaded/updated, so Chrome never auto-injected the script — inject the built
+ * content script on demand and retry once.
+ *
+ * Returns null only when the tab genuinely has no reachable content script
+ * (e.g. a restricted page the extension has no host access to).
+ */
+export async function requestProduct(tabId: number): Promise<ExtractionOutcome | null> {
+  const first = await sendToTab(tabId, { type: 'GET_PRODUCT' });
+  if (first) return first;
+
+  const files = chrome.runtime.getManifest().content_scripts?.[0]?.js ?? [];
+  if (files.length === 0) return null;
+
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files });
+  } catch {
+    return null; // No host access to this tab.
+  }
+  return sendToTab(tabId, { type: 'GET_PRODUCT' });
+}

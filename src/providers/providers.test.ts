@@ -157,3 +157,83 @@ describe('error handling', () => {
     ).rejects.toThrow(/Network request failed/);
   });
 });
+
+describe('validate', () => {
+  it('openai lists models with the key and reports success', async () => {
+    const fetchMock = mockFetch({ data: [] });
+    const result = await getProvider('openai').validate(settingsFor({ provider: 'openai' }));
+    const { url, init } = await callWithoutBody(fetchMock);
+    expect(url).toBe('https://api.openai.com/v1/models');
+    expect(init.method ?? 'GET').toBe('GET');
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer test-key');
+    expect(result.ok).toBe(true);
+  });
+
+  it('gemini passes the key in the query string', async () => {
+    const fetchMock = mockFetch({ models: [] });
+    const result = await getProvider('gemini').validate(settingsFor({ provider: 'gemini' }));
+    const { url } = await callWithoutBody(fetchMock);
+    expect(url).toContain('/models?key=test-key');
+    expect(result.ok).toBe(true);
+  });
+
+  it('anthropic sends a 1-token ping and treats 200 as valid', async () => {
+    const fetchMock = mockFetch({ content: [] });
+    const result = await getProvider('anthropic').validate(settingsFor({ provider: 'anthropic' }));
+    const { url, body } = await lastCall(fetchMock);
+    expect(url).toBe('https://api.anthropic.com/v1/messages');
+    expect(body.max_tokens).toBe(1);
+    expect(result.ok).toBe(true);
+  });
+
+  it('reports invalid keys clearly (401)', async () => {
+    mockFetch({ error: { message: 'bad key' } }, { status: 401 });
+    const result = await getProvider('openai').validate(settingsFor({ provider: 'openai' }));
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/Invalid or unauthorized/);
+  });
+
+  it('treats 429 as a recognized (rate-limited) key', async () => {
+    mockFetch({}, { status: 429 });
+    const result = await getProvider('openai').validate(settingsFor({ provider: 'openai' }));
+    expect(result.ok).toBe(true);
+    expect(result.message).toMatch(/rate-limited/i);
+  });
+
+  it('reports unreachable providers without throwing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch');
+      })
+    );
+    const result = await getProvider('openai').validate(settingsFor({ provider: 'openai' }));
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/Could not reach/);
+  });
+
+  it('ollama warns when the configured model is not pulled', async () => {
+    mockFetch({ models: [{ name: 'mistral:latest' }] });
+    const result = await getProvider('ollama').validate(
+      settingsFor({ provider: 'ollama', apiKey: '', model: 'llama3.1' })
+    );
+    expect(result.ok).toBe(true);
+    expect(result.message).toMatch(/not pulled/);
+  });
+
+  it('ollama accepts a pulled model (matching the :tag form)', async () => {
+    mockFetch({ models: [{ name: 'llama3.1:latest' }] });
+    const result = await getProvider('ollama').validate(
+      settingsFor({ provider: 'ollama', apiKey: '', model: 'llama3.1' })
+    );
+    expect(result.ok).toBe(true);
+    expect(result.message).toMatch(/reachable/);
+  });
+});
+
+async function callWithoutBody(fn: ReturnType<typeof mockFetch>) {
+  const call = fn.mock.calls.at(-1);
+  if (!call) throw new Error('fetch was not called');
+  const [url, init] = call as unknown as [string, RequestInit];
+  return { url, init: init ?? {} };
+}

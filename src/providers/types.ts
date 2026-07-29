@@ -9,6 +9,12 @@ export interface CompletionRequest {
   signal?: AbortSignal;
 }
 
+/** Outcome of a lightweight connection / API-key check. */
+export interface ValidationResult {
+  ok: boolean;
+  message: string;
+}
+
 /**
  * A provider turns a {@link CompletionRequest} into raw model text. Providers
  * are intentionally thin: prompt construction lives in `prompts/` and response
@@ -25,6 +31,12 @@ export interface LLMProvider {
   /** A couple of suggested model ids to seed the options UI. */
   readonly suggestedModels: readonly string[];
   complete(req: CompletionRequest): Promise<string>;
+  /**
+   * Cheaply verify that the current settings can reach the provider and (where
+   * applicable) that the API key is accepted. Should never throw — network and
+   * auth failures are returned as `{ ok: false }`.
+   */
+  validate(settings: Settings, signal?: AbortSignal): Promise<ValidationResult>;
 }
 
 /** Thrown for any provider-side failure, with a user-facing message. */
@@ -99,8 +111,42 @@ function providerHttpMessage(status: number, body: string): string {
   return `Request failed (${status}).${suffix}`;
 }
 
+/** Map an HTTP status from a key check to a user-facing message. */
+export function keyCheckMessage(status: number, detail: string): string {
+  const suffix = detail ? ` — ${detail}` : '';
+  if (status === 401 || status === 403)
+    return `Invalid or unauthorized API key (${status}).${suffix}`;
+  if (status === 404) return `Not found (404). Check the model name or base URL.${suffix}`;
+  if (status === 400) return `Request rejected (400). Check the model name.${suffix}`;
+  return `Provider returned ${status}.${suffix}`;
+}
+
+/**
+ * Shared GET-based key check used by OpenAI-compatible and Gemini providers. A
+ * 2xx (or 429, which means the key is recognized but rate-limited) is treated
+ * as success. Never throws.
+ */
+export async function checkEndpoint(
+  url: string,
+  init: { headers?: Record<string, string>; signal?: AbortSignal } = {}
+): Promise<ValidationResult> {
+  let res: Response;
+  try {
+    res = await fetch(url, { method: 'GET', headers: init.headers, signal: init.signal });
+  } catch (cause) {
+    if (cause instanceof DOMException && cause.name === 'AbortError') throw cause;
+    return {
+      ok: false,
+      message: 'Could not reach the provider. Check your connection and base URL.',
+    };
+  }
+  if (res.ok) return { ok: true, message: 'API key looks valid.' };
+  if (res.status === 429) return { ok: true, message: 'Key recognized (currently rate-limited).' };
+  return { ok: false, message: keyCheckMessage(res.status, extractErrorDetail(await res.text())) };
+}
+
 /** Best-effort extraction of an error message from a provider error body. */
-function extractErrorDetail(body: string): string {
+export function extractErrorDetail(body: string): string {
   if (!body) return '';
   try {
     const parsed = JSON.parse(body) as {

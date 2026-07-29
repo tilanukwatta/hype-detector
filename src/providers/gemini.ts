@@ -1,4 +1,4 @@
-import { postJson, ProviderError, resolveBaseUrl, type LLMProvider } from './types';
+import { checkEndpoint, postJson, ProviderError, resolveBaseUrl, type LLMProvider } from './types';
 
 interface GeminiResponse {
   candidates?: Array<{
@@ -44,5 +44,12 @@ export const geminiProvider: LLMProvider = {
       throw new ProviderError('The model returned an empty response.', { provider: this.id });
     }
     return text;
+  },
+
+  validate(settings, signal) {
+    // Listing models with the key is a cheap, token-free validity check.
+    const base = resolveBaseUrl(this, settings);
+    const url = `${base}/models?key=${encodeURIComponent(settings.apiKey)}`;
+    return checkEndpoint(url, { signal });
   },
 };

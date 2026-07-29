@@ -1,5 +1,10 @@
 import type { LLMProvider } from './types';
-import { chatCompletion } from './openai-compatible';
+import { chatCompletion, validateViaModels } from './openai-compatible';
+
+const OPENROUTER_HEADERS = {
+  'HTTP-Referer': 'https://github.com/tilanukwatta/hype-detector',
+  'X-Title': 'Hype Detector',
+};
 
 /**
  * OpenRouter exposes an OpenAI-compatible endpoint. The optional referer/title
@@ -12,9 +17,9 @@ export const openrouterProvider: LLMProvider = {
   defaultBaseUrl: 'https://openrouter.ai/api/v1',
   suggestedModels: ['openai/gpt-4o-mini', 'anthropic/claude-3.5-sonnet', 'google/gemini-flash-1.5'],
   complete(req) {
-    return chatCompletion(this, req, {
-      'HTTP-Referer': 'https://github.com/tilanukwatta/hype-detector',
-      'X-Title': 'Hype Detector',
-    });
+    return chatCompletion(this, req, OPENROUTER_HEADERS);
+  },
+  validate(settings, signal) {
+    return validateViaModels(this, settings, OPENROUTER_HEADERS, signal);
   },
 };

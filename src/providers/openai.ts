@@ -1,5 +1,5 @@
 import type { LLMProvider } from './types';
-import { chatCompletion } from './openai-compatible';
+import { chatCompletion, validateViaModels } from './openai-compatible';
 
 export const openaiProvider: LLMProvider = {
   id: 'openai',
@@ -9,5 +9,8 @@ export const openaiProvider: LLMProvider = {
   suggestedModels: ['gpt-4o-mini', 'gpt-4o', 'gpt-4.1-mini'],
   complete(req) {
     return chatCompletion(this, req);
+  },
+  validate(settings, signal) {
+    return validateViaModels(this, settings, {}, signal);
   },
 };

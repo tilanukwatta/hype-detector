@@ -1,4 +1,17 @@
-import { postJson, ProviderError, resolveBaseUrl, type LLMProvider } from './types';
+import {
+  extractErrorDetail,
+  keyCheckMessage,
+  postJson,
+  ProviderError,
+  resolveBaseUrl,
+  type LLMProvider,
+  type ValidationResult,
+} from './types';
+
+const ANTHROPIC_HEADERS = {
+  'anthropic-version': '2023-06-01',
+  'anthropic-dangerous-direct-browser-access': 'true',
+};
 
 interface AnthropicResponse {
   content?: Array<{ type: string; text?: string }>;
@@ -35,11 +48,7 @@ export const anthropicProvider: LLMProvider = {
       {
         provider: this.id,
         signal: req.signal,
-        headers: {
-          'x-api-key': settings.apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
+        headers: { 'x-api-key': settings.apiKey, ...ANTHROPIC_HEADERS },
       }
     )) as AnthropicResponse;
 
@@ -52,5 +61,38 @@ export const anthropicProvider: LLMProvider = {
       throw new ProviderError('The model returned an empty response.', { provider: this.id });
     }
     return text;
+  },
+
+  // Anthropic has no cheap key-check endpoint, so send a 1-token message. This
+  // also validates the model name (a bad model returns 404).
+  async validate(settings, signal): Promise<ValidationResult> {
+    const url = `${resolveBaseUrl(this, settings)}/messages`;
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': settings.apiKey,
+          ...ANTHROPIC_HEADERS,
+        },
+        body: JSON.stringify({
+          model: settings.model,
+          max_tokens: 1,
+          messages: [{ role: 'user', content: 'ping' }],
+        }),
+        signal,
+      });
+    } catch (cause) {
+      if (cause instanceof DOMException && cause.name === 'AbortError') throw cause;
+      return { ok: false, message: 'Could not reach Anthropic. Check your connection.' };
+    }
+    if (res.ok) return { ok: true, message: 'API key and model look valid.' };
+    if (res.status === 429)
+      return { ok: true, message: 'Key recognized (currently rate-limited).' };
+    return {
+      ok: false,
+      message: keyCheckMessage(res.status, extractErrorDetail(await res.text())),
+    };
   },
 };
