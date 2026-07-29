@@ -35,3 +35,40 @@ export function sendToTab<T extends ExtensionMessage>(
     });
   });
 }
+
+/**
+ * Ask a tab for its extracted product. If the content script does not answer —
+ * which happens when the tab was already open before the extension was
+ * loaded/updated, so Chrome never auto-injected the script — inject the built
+ * content script on demand and retry once.
+ *
+ * Returns null only when the tab genuinely has no reachable content script
+ * (e.g. a restricted page the extension has no host access to).
+ */
+export async function requestProduct(tabId: number): Promise<ExtractionOutcome> {
+  const first = await sendToTab(tabId, { type: 'GET_PRODUCT' });
+  if (first) return first;
+
+  const files = chrome.runtime.getManifest().content_scripts?.[0]?.js ?? [];
+  if (files.length === 0) {
+    return noReader('The page reader is missing from this build.');
+  }
+
+  // The content script may not be present (e.g. the tab predates the extension
+  // load). Inject it on demand, then retry. Surface the real error so failures
+  // are diagnosable rather than a silent "nothing happened".
+  try {
+    await chrome.scripting.executeScript({ target: { tabId }, files });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return noReader(`Could not load the page reader — ${detail}`);
+  }
+
+  const second = await sendToTab(tabId, { type: 'GET_PRODUCT' });
+  if (second) return second;
+  return noReader('The page reader was injected but did not respond.');
+}
+
+function noReader(message: string): ExtractionOutcome {
+  return { ok: false, reason: 'no-content-script', message };
+}
