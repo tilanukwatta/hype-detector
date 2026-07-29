@@ -31,7 +31,15 @@ every page, and results are cached locally until the page content changes.
 
 ## Install (from source)
 
-Requires Node 22+.
+> There is no store listing yet, so for now you build the extension and load it
+> unpacked. It's a one-time setup that takes a couple of minutes.
+
+### Prerequisites
+
+- **Node.js 22+** and npm (needed only to build — a future store install won't require this).
+- A Chromium browser: **Chrome**, **Edge**, or **Brave**.
+
+### 1. Build the extension
 
 ```bash
 git clone https://github.com/tilanukwatta/hype-detector.git
@@ -40,29 +48,60 @@ npm install
 npm run build      # outputs the unpacked extension to ./dist
 ```
 
-Then load it in your browser:
+### 2. Load it into your browser
 
-1. Open `chrome://extensions` (or `edge://extensions`, `brave://extensions`).
-2. Enable **Developer mode**.
-3. Click **Load unpacked** and select the `dist/` folder.
+1. Open your extensions page: `chrome://extensions` (Edge: `edge://extensions`, Brave: `brave://extensions`).
+2. Turn on **Developer mode** (top-right toggle).
+3. Click **Load unpacked** (top-left) and select the **`dist`** folder created by the build.
+4. _(Optional)_ Click the puzzle-piece icon in the toolbar and **pin** Hype Detector so it stays visible.
 
-For live development with hot reload:
+The extension card should show no errors. (If it ever does, click **Clear all**, then reload.)
 
-```bash
-npm run dev
-```
+### 3. Add your API key
 
-## Setup
+1. Click the **Hype Detector** toolbar icon → **Options**.
+2. Choose a **provider**, paste your **API key**, and set a **model**. Suggested pairings:
+   - **Anthropic** — `claude-sonnet-5`
+   - **OpenAI** — `gpt-4o-mini`
+   - **Google Gemini** — `gemini-1.5-flash`
+   - **Ollama** (local, no key) — see below
+3. Click **Save settings**, then **Test connection** to confirm the key _and_ the selected model work before analyzing.
 
-1. Click the Hype Detector toolbar icon → **Options**.
-2. Choose a provider, paste your API key, and pick a model.
-3. Visit an Amazon product page, click the toolbar icon → **Analyze this page**.
+Your API key is stored only on your device — see the [Privacy Policy](./PRIVACY.md).
+
+### 4. Analyze a product
+
+1. Open an **Amazon product page** (a product detail page, e.g. `amazon.com/dp/...`).
+2. Click the toolbar icon → **Analyze this page**. The side panel opens with the credibility breakdown.
+3. Use **Re-analyze** to force a fresh run (results are cached until the page content changes).
 
 ### Using a local model (no API key, fully offline)
 
 Install [Ollama](https://ollama.com), pull a model (e.g. `ollama pull llama3.1`), then in
 Options choose the **Ollama (local)** provider. The default endpoint is
 `http://localhost:11434`.
+
+### Updating after code changes
+
+The unpacked extension is a static build, so after pulling changes or editing code:
+
+```bash
+npm run build
+```
+
+Then return to your extensions page and click the **↻ reload** icon on the Hype Detector
+card. For active development with hot reload, use `npm run dev` instead.
+
+### Troubleshooting
+
+- **"Could not read this page" / no result** — make sure you're on a supported product page.
+  If the tab was already open when you loaded or updated the extension, **reload the page**
+  and try again.
+- **Authentication or model errors** — use **Test connection** in Options. It distinguishes an
+  invalid key from a valid key that lacks access to the selected model; switch the model or
+  provider if needed.
+- **Errors on the extension card after an update** — click **Clear all**, then the **↻ reload**
+  icon. For a fully clean reload, **Remove** the extension and **Load unpacked** again.
 
 ## Scripts
 
