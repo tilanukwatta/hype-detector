@@ -114,34 +114,45 @@ function providerHttpMessage(status: number, body: string): string {
 /** Map an HTTP status from a key check to a user-facing message. */
 export function keyCheckMessage(status: number, detail: string): string {
   const suffix = detail ? ` — ${detail}` : '';
-  if (status === 401 || status === 403)
-    return `Invalid or unauthorized API key (${status}).${suffix}`;
+  if (status === 401) return `Invalid or unauthorized API key (401).${suffix}`;
+  if (status === 403)
+    return `Access denied (403). Your key may not have access to this model.${suffix}`;
   if (status === 404) return `Not found (404). Check the model name or base URL.${suffix}`;
   if (status === 400) return `Request rejected (400). Check the model name.${suffix}`;
   return `Provider returned ${status}.${suffix}`;
 }
 
 /**
- * Shared GET-based key check used by OpenAI-compatible and Gemini providers. A
- * 2xx (or 429, which means the key is recognized but rate-limited) is treated
- * as success. Never throws.
+ * Shared validation POST: sends a minimal request and maps the response to a
+ * {@link ValidationResult}. Because it exercises the *selected model* (not just
+ * the key), it catches per-model access problems (e.g. a project that lacks
+ * access to a model → 403) up front instead of at analysis time. A 2xx — or a
+ * 429, which means the request was authenticated but rate-limited — is success.
+ * Never throws (except to propagate an abort).
  */
-export async function checkEndpoint(
+export async function validationPing(
+  provider: string,
   url: string,
-  init: { headers?: Record<string, string>; signal?: AbortSignal } = {}
+  init: { headers?: Record<string, string>; body: unknown; signal?: AbortSignal }
 ): Promise<ValidationResult> {
   let res: Response;
   try {
-    res = await fetch(url, { method: 'GET', headers: init.headers, signal: init.signal });
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...init.headers },
+      body: JSON.stringify(init.body),
+      signal: init.signal,
+    });
   } catch (cause) {
     if (cause instanceof DOMException && cause.name === 'AbortError') throw cause;
     return {
       ok: false,
-      message: 'Could not reach the provider. Check your connection and base URL.',
+      message: `Could not reach ${provider}. Check your connection and base URL.`,
     };
   }
-  if (res.ok) return { ok: true, message: 'API key looks valid.' };
-  if (res.status === 429) return { ok: true, message: 'Key recognized (currently rate-limited).' };
+  if (res.ok) return { ok: true, message: 'API key and model look valid.' };
+  if (res.status === 429)
+    return { ok: true, message: 'Key and model recognized (currently rate-limited).' };
   return { ok: false, message: keyCheckMessage(res.status, extractErrorDetail(await res.text())) };
 }
 

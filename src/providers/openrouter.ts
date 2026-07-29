@@ -1,5 +1,5 @@
 import type { LLMProvider } from './types';
-import { chatCompletion, validateViaModels } from './openai-compatible';
+import { chatCompletion, validateViaChat } from './openai-compatible';
 
 const OPENROUTER_HEADERS = {
   'HTTP-Referer': 'https://github.com/tilanukwatta/hype-detector',
@@ -20,6 +20,6 @@ export const openrouterProvider: LLMProvider = {
     return chatCompletion(this, req, OPENROUTER_HEADERS);
   },
   validate(settings, signal) {
-    return validateViaModels(this, settings, OPENROUTER_HEADERS, signal);
+    return validateViaChat(this, settings, OPENROUTER_HEADERS, signal);
   },
 };

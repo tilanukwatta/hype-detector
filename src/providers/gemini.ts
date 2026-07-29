@@ -1,4 +1,4 @@
-import { checkEndpoint, postJson, ProviderError, resolveBaseUrl, type LLMProvider } from './types';
+import { postJson, ProviderError, resolveBaseUrl, validationPing, type LLMProvider } from './types';
 
 interface GeminiResponse {
   candidates?: Array<{
@@ -47,9 +47,16 @@ export const geminiProvider: LLMProvider = {
   },
 
   validate(settings, signal) {
-    // Listing models with the key is a cheap, token-free validity check.
+    // A 1-token generateContent call validates both the key and the selected
+    // model (a bad key/model surfaces as 400/403/404).
     const base = resolveBaseUrl(this, settings);
-    const url = `${base}/models?key=${encodeURIComponent(settings.apiKey)}`;
-    return checkEndpoint(url, { signal });
+    const url = `${base}/models/${encodeURIComponent(settings.model)}:generateContent?key=${encodeURIComponent(settings.apiKey)}`;
+    return validationPing(this.label, url, {
+      signal,
+      body: {
+        contents: [{ role: 'user', parts: [{ text: 'ping' }] }],
+        generationConfig: { maxOutputTokens: 1 },
+      },
+    });
   },
 };

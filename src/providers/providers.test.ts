@@ -159,21 +159,28 @@ describe('error handling', () => {
 });
 
 describe('validate', () => {
-  it('openai lists models with the key and reports success', async () => {
-    const fetchMock = mockFetch({ data: [] });
-    const result = await getProvider('openai').validate(settingsFor({ provider: 'openai' }));
-    const { url, init } = await callWithoutBody(fetchMock);
-    expect(url).toBe('https://api.openai.com/v1/models');
-    expect(init.method ?? 'GET').toBe('GET');
+  it('openai pings the selected model with a 1-token completion', async () => {
+    const fetchMock = mockFetch({ choices: [{ message: { content: 'x' } }] });
+    const result = await getProvider('openai').validate(
+      settingsFor({ provider: 'openai', model: 'gpt-4o-mini' })
+    );
+    const { url, init, body } = await lastCall(fetchMock);
+    expect(url).toBe('https://api.openai.com/v1/chat/completions');
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer test-key');
+    expect(body.model).toBe('gpt-4o-mini');
+    expect(body.max_tokens).toBe(1);
     expect(result.ok).toBe(true);
   });
 
-  it('gemini passes the key in the query string', async () => {
-    const fetchMock = mockFetch({ models: [] });
-    const result = await getProvider('gemini').validate(settingsFor({ provider: 'gemini' }));
-    const { url } = await callWithoutBody(fetchMock);
-    expect(url).toContain('/models?key=test-key');
+  it('gemini pings generateContent for the selected model', async () => {
+    const fetchMock = mockFetch({ candidates: [] });
+    const result = await getProvider('gemini').validate(
+      settingsFor({ provider: 'gemini', model: 'gemini-1.5-flash' })
+    );
+    const { url, body } = await lastCall(fetchMock);
+    expect(url).toContain('/models/gemini-1.5-flash:generateContent');
+    expect(url).toContain('key=test-key');
+    expect(body.generationConfig.maxOutputTokens).toBe(1);
     expect(result.ok).toBe(true);
   });
 
@@ -186,14 +193,25 @@ describe('validate', () => {
     expect(result.ok).toBe(true);
   });
 
-  it('reports invalid keys clearly (401)', async () => {
+  it('reports an invalid key clearly (401)', async () => {
     mockFetch({ error: { message: 'bad key' } }, { status: 401 });
     const result = await getProvider('openai').validate(settingsFor({ provider: 'openai' }));
     expect(result.ok).toBe(false);
     expect(result.message).toMatch(/Invalid or unauthorized/);
   });
 
-  it('treats 429 as a recognized (rate-limited) key', async () => {
+  it('flags a model the key cannot access (403) as denied, not a bad key', async () => {
+    mockFetch(
+      { error: { message: 'Project does not have access to model gpt-4o-mini' } },
+      { status: 403 }
+    );
+    const result = await getProvider('openai').validate(settingsFor({ provider: 'openai' }));
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/Access denied/);
+    expect(result.message).toMatch(/does not have access to model/);
+  });
+
+  it('treats 429 as a recognized (rate-limited) key/model', async () => {
     mockFetch({}, { status: 429 });
     const result = await getProvider('openai').validate(settingsFor({ provider: 'openai' }));
     expect(result.ok).toBe(true);
@@ -230,10 +248,3 @@ describe('validate', () => {
     expect(result.message).toMatch(/reachable/);
   });
 });
-
-async function callWithoutBody(fn: ReturnType<typeof mockFetch>) {
-  const call = fn.mock.calls.at(-1);
-  if (!call) throw new Error('fetch was not called');
-  const [url, init] = call as unknown as [string, RequestInit];
-  return { url, init: init ?? {} };
-}
