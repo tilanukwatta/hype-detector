@@ -1,4 +1,5 @@
 import {
+  AnalysisSchema,
   DEFAULT_SETTINGS,
   SettingsSchema,
   type CachedAnalysis,
@@ -58,14 +59,26 @@ async function readCache(): Promise<Record<string, CachedAnalysis>> {
   >;
 }
 
-/** Return a cached analysis matching the hash/provider/model, or null. */
+/**
+ * Return a cached analysis matching the hash/provider/model, or null.
+ *
+ * The stored analysis is re-validated through {@link AnalysisSchema} so entries
+ * written by an older version (missing fields added later, e.g. `review_summary`)
+ * are normalised with safe defaults. Without this, rendering a stale entry could
+ * crash the UI. Unrecoverable entries are treated as a cache miss.
+ */
 export async function getCachedAnalysis(
   hash: string,
   provider: ProviderId,
   model: string
 ): Promise<CachedAnalysis | null> {
   const cache = await readCache();
-  return cache[cacheKey(hash, provider, model)] ?? null;
+  const entry = cache[cacheKey(hash, provider, model)];
+  if (!entry) return null;
+
+  const parsed = AnalysisSchema.safeParse(entry.analysis);
+  if (!parsed.success) return null;
+  return { ...entry, analysis: parsed.data };
 }
 
 export async function putCachedAnalysis(entry: CachedAnalysis): Promise<void> {

@@ -76,4 +76,24 @@ describe('analysis cache', () => {
     });
     expect(await getCachedAnalysis('abc', 'anthropic', 'gpt-4o')).toBeNull();
   });
+
+  it('normalizes a stale entry missing newer fields (e.g. review_summary)', async () => {
+    // Simulate an entry written before review_summary existed.
+    await chrome.storage.local.set({
+      analysisCache: {
+        'h:anthropic:m': {
+          productHash: 'h',
+          provider: 'anthropic',
+          model: 'm',
+          analysis: { credibility_score: 80, summary: 'old result' },
+          createdAt: 1,
+        },
+      },
+    });
+    const hit = await getCachedAnalysis('h', 'anthropic', 'm');
+    expect(hit).not.toBeNull();
+    expect(hit?.analysis.credibility_score).toBe(80);
+    // Missing field is filled with a safe default instead of being undefined.
+    expect(hit?.analysis.review_summary.product_pros).toEqual([]);
+  });
 });
