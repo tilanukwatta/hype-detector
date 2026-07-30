@@ -1,4 +1,4 @@
-import type { Analysis, Claim, Product } from '@/types';
+import type { Analysis, Claim, Product, ReviewSummary } from '@/types';
 import { StarRating } from './StarRating';
 import { Section, HypeBadge } from './Section';
 
@@ -26,6 +26,38 @@ function StringList({ items }: { items: string[] }) {
         <li key={i}>{item}</li>
       ))}
     </ul>
+  );
+}
+
+/** Pros/cons pair for one subject (product or seller); renders nothing if empty. */
+function ProsCons({ label, pros, cons }: { label: string; pros: string[]; cons: string[] }) {
+  if (pros.length === 0 && cons.length === 0) return null;
+  return (
+    <div style={{ display: 'grid', gap: '6px' }}>
+      <strong>{label}</strong>
+      {pros.length > 0 && (
+        <div>
+          <div style={{ color: 'var(--good)', fontSize: '13px' }}>Pros</div>
+          <StringList items={pros} />
+        </div>
+      )}
+      {cons.length > 0 && (
+        <div>
+          <div style={{ color: 'var(--danger)', fontSize: '13px' }}>Cons</div>
+          <StringList items={cons} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function hasReviewContent(rs: ReviewSummary): boolean {
+  return Boolean(
+    rs.summary ||
+    rs.product_pros.length ||
+    rs.product_cons.length ||
+    rs.seller_pros.length ||
+    rs.seller_cons.length
   );
 }
 
@@ -63,6 +95,29 @@ export function AnalysisView({ analysis, product }: { analysis: Analysis; produc
       {analysis.summary && (
         <Section title="Summary" tone="neutral">
           <p style={{ margin: 0 }}>{analysis.summary}</p>
+        </Section>
+      )}
+
+      {hasReviewContent(analysis.review_summary) && (
+        <Section title="What reviewers say" tone="neutral">
+          <div style={{ display: 'grid', gap: 'var(--space)' }}>
+            {analysis.review_summary.summary && (
+              <p style={{ margin: 0 }}>{analysis.review_summary.summary}</p>
+            )}
+            <ProsCons
+              label="Product"
+              pros={analysis.review_summary.product_pros}
+              cons={analysis.review_summary.product_cons}
+            />
+            <ProsCons
+              label="Seller"
+              pros={analysis.review_summary.seller_pros}
+              cons={analysis.review_summary.seller_cons}
+            />
+            <p className="muted" style={{ fontSize: '12px', margin: 0 }}>
+              Based only on the customer reviews visible on this page.
+            </p>
+          </div>
         </Section>
       )}
 

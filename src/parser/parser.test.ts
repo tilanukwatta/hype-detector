@@ -104,6 +104,32 @@ describe('parseAnalysis', () => {
     expect(result.analysis.summary).toBe('only a summary');
     expect(result.analysis.good_signs).toEqual([]);
     expect(result.analysis.marketing_hype).toBe('Medium');
+    // review_summary defaults to an empty structure when absent.
+    expect(result.analysis.review_summary).toEqual({
+      summary: '',
+      product_pros: [],
+      product_cons: [],
+      seller_pros: [],
+      seller_cons: [],
+    });
+  });
+
+  it('parses a provided review_summary', () => {
+    const result = parseAnalysis(
+      JSON.stringify({
+        ...validPayload,
+        review_summary: {
+          summary: 'Mostly positive.',
+          product_pros: ['Works well'],
+          product_cons: [],
+          seller_pros: ['Fast shipping'],
+          seller_cons: ['One leaked'],
+        },
+      })
+    );
+    expect(result.ok).toBe(true);
+    expect(result.analysis.review_summary.product_pros).toEqual(['Works well']);
+    expect(result.analysis.review_summary.seller_cons).toEqual(['One leaked']);
   });
 });
 

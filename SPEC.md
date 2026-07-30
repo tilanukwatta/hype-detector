@@ -176,10 +176,13 @@ For Amazon MVP extract:
 - Product description
 - Specifications
 - "About this item"
+- Overall rating and review count
+- A bounded sample of visible customer reviews
 
-Do NOT scrape reviews in MVP.
-
-Reviews dramatically increase token usage.
+Reviews are used to produce a review summary (see Expected Response Format).
+Because reviews increase token usage, extraction is capped: only the reviews
+visible on the product page are read, limited in number and truncated in length.
+Full review-page scraping and fake-review detection remain future features.
 
 ---
 
@@ -194,11 +197,14 @@ Reviews dramatically increase token usage.
   "category": "...",
   "description": "...",
   "bullets": [],
-  "specifications": {}
+  "specifications": {},
+  "rating": "...",
+  "reviewCount": "...",
+  "reviews": [{ "rating": "...", "title": "...", "body": "..." }]
 }
 ```
 
-Never send raw HTML.
+Never send raw HTML. Reviews are capped in count and truncated in length.
 
 ---
 
@@ -268,9 +274,19 @@ Always explain your reasoning.
   "scientific_claims": [],
   "missing_evidence": [],
   "good_signs": [],
-  "summary": "..."
+  "summary": "...",
+  "review_summary": {
+    "summary": "...",
+    "product_pros": [],
+    "product_cons": [],
+    "seller_pros": [],
+    "seller_cons": []
+  }
 }
 ```
+
+`review_summary` is derived only from the provided customer reviews; all fields
+are empty when the page has no reviews.
 
 Parser should gracefully handle malformed JSON.
 
@@ -284,6 +300,7 @@ Display:
 
 - Overall Credibility
 - Summary
+- What Reviewers Say (product & seller pros/cons; hidden when no reviews)
 - Good Signs
 - Warnings
 - Marketing Language

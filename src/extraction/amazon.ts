@@ -1,5 +1,9 @@
-import type { Product } from '@/types';
+import type { Product, Review } from '@/types';
 import { type SiteAdapter, selectText, text } from './types';
+
+/** Bound how many reviews and how much text we send, to cap token usage. */
+const MAX_REVIEWS = 10;
+const MAX_REVIEW_CHARS = 500;
 
 /**
  * All Amazon-specific selectors live here, isolated from the extraction logic
@@ -28,6 +32,16 @@ const SELECTORS = {
     '#technicalSpecifications_section_1',
   ],
   detailBulletsList: '#detailBullets_feature_div ul',
+  overallRating: [
+    '[data-hook="rating-out-of-text"]',
+    '#acrPopover .a-icon-alt',
+    'span[data-hook="rating-out-of-text"]',
+  ],
+  reviewCount: ['#acrCustomerReviewText', '[data-hook="total-review-count"]'],
+  reviewItem: '[data-hook="review"], [data-hook="cmps-review"]',
+  reviewTitle: '[data-hook="review-title"]',
+  reviewBody: '[data-hook="review-body"]',
+  reviewStar: '[data-hook="review-star-rating"], [data-hook="cmps-review-star-rating"]',
 } as const;
 
 const BRAND_PREFIX = /^(visit the|brand:|by)\s+/i;
@@ -86,6 +100,21 @@ function extractSpecifications(doc: Document): Record<string, string> {
   return specs;
 }
 
+function extractReviews(doc: Document): Review[] {
+  const items = Array.from(doc.querySelectorAll(SELECTORS.reviewItem)).slice(0, MAX_REVIEWS);
+  const reviews: Review[] = [];
+  for (const item of items) {
+    const body = text(item.querySelector(SELECTORS.reviewBody));
+    if (!body) continue;
+    reviews.push({
+      rating: text(item.querySelector(SELECTORS.reviewStar)) || undefined,
+      title: text(item.querySelector(SELECTORS.reviewTitle)) || undefined,
+      body: body.length > MAX_REVIEW_CHARS ? `${body.slice(0, MAX_REVIEW_CHARS)}…` : body,
+    });
+  }
+  return reviews;
+}
+
 function extractCategory(doc: Document): string | undefined {
   const raw = selectText(doc, SELECTORS.category);
   if (!raw) return undefined;
@@ -123,6 +152,9 @@ export const amazonAdapter: SiteAdapter = {
       description: selectText(doc, SELECTORS.description) || undefined,
       bullets: extractBullets(doc),
       specifications: extractSpecifications(doc),
+      rating: selectText(doc, SELECTORS.overallRating) || undefined,
+      reviewCount: selectText(doc, SELECTORS.reviewCount) || undefined,
+      reviews: extractReviews(doc),
     };
 
     return product;
