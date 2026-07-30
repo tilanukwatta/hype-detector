@@ -29,6 +29,11 @@ describe('hashProduct', () => {
   it('changes when content changes', () => {
     expect(hashProduct({ ...baseProduct, title: 'Different' })).not.toBe(hashProduct(baseProduct));
   });
+
+  it('changes when reviews are added (so loaded reviews invalidate the cache)', () => {
+    const withReviews = { ...baseProduct, reviews: [{ body: 'Great product' }] };
+    expect(hashProduct(withReviews)).not.toBe(hashProduct(baseProduct));
+  });
 });
 
 describe('settings storage', () => {
