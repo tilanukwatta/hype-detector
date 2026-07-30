@@ -98,6 +98,26 @@ export function AnalysisView({ analysis, product }: { analysis: Analysis; produc
         </Section>
       )}
 
+      {product &&
+        !hasReviewContent(analysis.review_summary) &&
+        product.reviews.length === 0 &&
+        product.reviewCount && (
+          <div className="card" role="status" style={{ fontSize: '13px' }}>
+            <strong>Reviews not read</strong>
+            <p style={{ margin: '6px 0 0' }}>
+              This page reports reviews ({product.reviewCount}), but none could be read from the
+              page. Scroll down to the &ldquo;Customer reviews&rdquo; section so they load, then
+              click <strong>Re-analyze</strong>.
+            </p>
+          </div>
+        )}
+
+      {product && !hasReviewContent(analysis.review_summary) && product.reviews.length > 0 && (
+        <div className="muted" style={{ fontSize: '12px' }}>
+          Read {product.reviews.length} review(s) from the page, but no review summary was returned.
+        </div>
+      )}
+
       {hasReviewContent(analysis.review_summary) && (
         <Section title="What reviewers say" tone="neutral">
           <div style={{ display: 'grid', gap: 'var(--space)' }}>

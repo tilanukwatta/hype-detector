@@ -79,4 +79,22 @@ describe('AnalysisView', () => {
     render(<AnalysisView analysis={analysis()} />);
     expect(screen.queryByText('What reviewers say')).not.toBeInTheDocument();
   });
+
+  it('explains when a page has reviews but none could be read', () => {
+    render(
+      <AnalysisView
+        analysis={analysis()}
+        product={{
+          website: 'Amazon',
+          title: 'X',
+          bullets: [],
+          specifications: {},
+          reviewCount: '7,854 ratings',
+          reviews: [],
+        }}
+      />
+    );
+    expect(screen.getByText('Reviews not read')).toBeInTheDocument();
+    expect(screen.getByText(/scroll down/i)).toBeInTheDocument();
+  });
 });

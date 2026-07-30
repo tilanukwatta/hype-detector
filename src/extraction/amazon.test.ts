@@ -95,6 +95,23 @@ describe('amazon extraction', () => {
     expect(outcome.product.reviews).toEqual([]);
   });
 
+  it('falls back to the "Customers say" AI summary when the raw list is absent', () => {
+    const withAiSummary = new JSDOM(
+      `<!DOCTYPE html><body>
+         <h1 id="title"><span id="productTitle">X</span></h1>
+         <div data-hook="cr-summarization-attributes-summary">
+           Customers report the sprouts grow quickly and taste fresh, but some received
+           leaking packages.
+         </div>
+       </body>`
+    ).window.document;
+    const outcome = extractProduct(withAiSummary, PRODUCT_URL);
+    if (!outcome.ok) throw new Error('expected success');
+    expect(outcome.product.reviews).toHaveLength(1);
+    expect(outcome.product.reviews[0].title).toMatch(/Customers say/);
+    expect(outcome.product.reviews[0].body).toContain('grow quickly');
+  });
+
   it('never includes raw HTML', () => {
     const outcome = extractProduct(doc, PRODUCT_URL);
     if (!outcome.ok) throw new Error('expected success');

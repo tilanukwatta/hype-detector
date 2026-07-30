@@ -16,6 +16,9 @@ export function hashProduct(product: Product): string {
     specifications: Object.fromEntries(
       Object.entries(product.specifications).sort(([a], [b]) => a.localeCompare(b))
     ),
+    // Include reviews so that when they load (e.g. after scrolling) the cache is
+    // invalidated and the analysis re-runs instead of reusing a no-review result.
+    reviews: product.reviews.map((r) => r.body),
   };
   return fnv1a(JSON.stringify(normalised));
 }

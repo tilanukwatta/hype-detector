@@ -38,10 +38,18 @@ const SELECTORS = {
     'span[data-hook="rating-out-of-text"]',
   ],
   reviewCount: ['#acrCustomerReviewText', '[data-hook="total-review-count"]'],
-  reviewItem: '[data-hook="review"], [data-hook="cmps-review"]',
-  reviewTitle: '[data-hook="review-title"]',
-  reviewBody: '[data-hook="review-body"]',
-  reviewStar: '[data-hook="review-star-rating"], [data-hook="cmps-review-star-rating"]',
+  reviewItem:
+    '[data-hook="review"], [data-hook="cmps-review"], #cm-cr-dp-review-list [data-hook="review"], div[id^="customer_review"]',
+  reviewTitle: '[data-hook="review-title"], a.review-title, span.review-title',
+  reviewBody: '[data-hook="review-body"], span.review-text-content, div.reviewText',
+  reviewStar:
+    '[data-hook="review-star-rating"], [data-hook="cmps-review-star-rating"], i[class*="a-star-"] .a-icon-alt',
+  /** Amazon's "Customers say" AI summary — reliably in the DOM even before reviews load. */
+  reviewsAiSummary: [
+    '[data-hook="cr-summarization-attributes-summary"]',
+    '#product-summary .a-expander-content',
+    '#cr-summarization-content',
+  ],
 } as const;
 
 const BRAND_PREFIX = /^(visit the|brand:|by)\s+/i;
@@ -100,16 +108,30 @@ function extractSpecifications(doc: Document): Record<string, string> {
   return specs;
 }
 
+const truncate = (s: string): string =>
+  s.length > MAX_REVIEW_CHARS ? `${s.slice(0, MAX_REVIEW_CHARS)}…` : s;
+
 function extractReviews(doc: Document): Review[] {
-  const items = Array.from(doc.querySelectorAll(SELECTORS.reviewItem)).slice(0, MAX_REVIEWS);
   const reviews: Review[] = [];
-  for (const item of items) {
-    const body = text(item.querySelector(SELECTORS.reviewBody));
+
+  // Amazon's "Customers say" block is an AI summary of the reviews and is
+  // usually present even before the raw review list lazy-loads. Include it so we
+  // still have review-derived signal in that common case.
+  const aiSummary = selectText(doc, SELECTORS.reviewsAiSummary);
+  if (aiSummary) {
+    reviews.push({ title: 'Customers say (Amazon review summary)', body: truncate(aiSummary) });
+  }
+
+  for (const item of Array.from(doc.querySelectorAll(SELECTORS.reviewItem))) {
+    if (reviews.length >= MAX_REVIEWS) break;
+    // Prefer the dedicated body element; fall back to the item's text if the
+    // body selector misses (markup varies by locale / A-B test).
+    const body = text(item.querySelector(SELECTORS.reviewBody)) || text(item);
     if (!body) continue;
     reviews.push({
       rating: text(item.querySelector(SELECTORS.reviewStar)) || undefined,
       title: text(item.querySelector(SELECTORS.reviewTitle)) || undefined,
-      body: body.length > MAX_REVIEW_CHARS ? `${body.slice(0, MAX_REVIEW_CHARS)}…` : body,
+      body: truncate(body),
     });
   }
   return reviews;
