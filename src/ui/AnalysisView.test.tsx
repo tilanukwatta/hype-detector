@@ -54,4 +54,29 @@ describe('AnalysisView', () => {
     // Never asserts a product is fake.
     expect(screen.queryByText(/fake/i)).not.toBeInTheDocument();
   });
+
+  it('renders the review summary section when reviews are present', () => {
+    render(
+      <AnalysisView
+        analysis={analysis({
+          review_summary: {
+            summary: 'Reviewers like the glow but report shipping issues.',
+            product_pros: ['Brightens skin'],
+            product_cons: ['Messy dropper'],
+            seller_pros: [],
+            seller_cons: ['Arrived leaking'],
+          },
+        })}
+      />
+    );
+    expect(screen.getByText('What reviewers say')).toBeInTheDocument();
+    expect(screen.getByText('Brightens skin')).toBeInTheDocument();
+    expect(screen.getByText('Arrived leaking')).toBeInTheDocument();
+    expect(screen.getByText(/only on the customer reviews/i)).toBeInTheDocument();
+  });
+
+  it('omits the review section when there are no reviews', () => {
+    render(<AnalysisView analysis={analysis()} />);
+    expect(screen.queryByText('What reviewers say')).not.toBeInTheDocument();
+  });
 });

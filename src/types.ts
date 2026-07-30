@@ -17,6 +17,14 @@ export type ProviderId = (typeof PROVIDER_IDS)[number];
 // Product (what the extractor produces; never raw HTML, never reviews)
 // ---------------------------------------------------------------------------
 
+/** A single customer review as scraped from the page (bounded/truncated). */
+export const ReviewSchema = z.object({
+  rating: z.string().optional(),
+  title: z.string().optional(),
+  body: z.string(),
+});
+export type Review = z.infer<typeof ReviewSchema>;
+
 export const ProductSchema = z.object({
   website: z.string(),
   url: z.string().optional(),
@@ -27,6 +35,12 @@ export const ProductSchema = z.object({
   description: z.string().optional(),
   bullets: z.array(z.string()).default([]),
   specifications: z.record(z.string(), z.string()).default({}),
+  /** Overall star rating text, e.g. "4.5 out of 5 stars". */
+  rating: z.string().optional(),
+  /** Total review count text, e.g. "1,234 ratings". */
+  reviewCount: z.string().optional(),
+  /** A bounded sample of visible customer reviews (capped + truncated). */
+  reviews: z.array(ReviewSchema).default([]),
 });
 
 export type Product = z.infer<typeof ProductSchema>;
@@ -76,6 +90,19 @@ export const ClaimSchema = z.object({
 });
 export type Claim = z.infer<typeof ClaimSchema>;
 
+/**
+ * Summary of what customer reviews say, split into product vs seller pros/cons.
+ * Derived only from the reviews provided; all fields empty when there are none.
+ */
+export const ReviewSummarySchema = z.object({
+  summary: z.string().default(''),
+  product_pros: z.array(z.string()).default([]),
+  product_cons: z.array(z.string()).default([]),
+  seller_pros: z.array(z.string()).default([]),
+  seller_cons: z.array(z.string()).default([]),
+});
+export type ReviewSummary = z.infer<typeof ReviewSummarySchema>;
+
 export const AnalysisSchema = z.object({
   overall_assessment: z.string().default(''),
   /** 0–100. Mapped to a 1–5 star scale in the UI. */
@@ -86,6 +113,14 @@ export const AnalysisSchema = z.object({
   missing_evidence: z.array(z.string()).default([]),
   good_signs: z.array(z.string()).default([]),
   summary: z.string().default(''),
+  /** Pros/cons synthesized from customer reviews (empty when no reviews). */
+  review_summary: ReviewSummarySchema.default({
+    summary: '',
+    product_pros: [],
+    product_cons: [],
+    seller_pros: [],
+    seller_cons: [],
+  }),
 });
 
 export type Analysis = z.infer<typeof AnalysisSchema>;

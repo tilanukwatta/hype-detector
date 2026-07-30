@@ -9,6 +9,9 @@ const product: Product = {
   price: '$29.99',
   bullets: ['Reduces wrinkles by 300%'],
   specifications: { Volume: '30 ml' },
+  rating: '4.1 out of 5 stars',
+  reviewCount: '2,317 ratings',
+  reviews: [{ rating: '2.0', title: 'Leaked', body: 'Arrived with a broken seal.' }],
 };
 
 describe('prompts', () => {
@@ -28,9 +31,24 @@ describe('prompts', () => {
   it('asks for a single json object with the expected keys', () => {
     const prompt = buildAnalysisPrompt(product);
     expect(prompt).toContain('ONLY a single JSON object');
-    for (const key of ['credibility_score', 'marketing_hype', 'unsupported_claims', 'summary']) {
+    for (const key of [
+      'credibility_score',
+      'marketing_hype',
+      'unsupported_claims',
+      'summary',
+      'review_summary',
+      'product_pros',
+      'seller_cons',
+    ]) {
       expect(prompt).toContain(key);
     }
+  });
+
+  it('embeds reviews and instructs to base review_summary only on them', () => {
+    const prompt = buildAnalysisPrompt(product);
+    expect(prompt).toContain('Arrived with a broken seal.');
+    expect(prompt).toContain('"reviewCount": "2,317 ratings"');
+    expect(prompt).toContain('use ONLY the customer reviews');
   });
 
   it('is stable for a given product (snapshot)', () => {

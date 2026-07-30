@@ -35,7 +35,14 @@ const RESPONSE_SCHEMA = `{
   "scientific_claims": [{ "claim": "...", "reasoning": "what evidence would be needed" }],
   "missing_evidence": ["specific evidence a buyer would want but the listing omits"],
   "good_signs": ["concrete, verifiable, or appropriately-hedged statements"],
-  "summary": "a short plain-language wrap-up for the shopper"
+  "summary": "a short plain-language wrap-up for the shopper",
+  "review_summary": {
+    "summary": "1-2 sentence neutral summary of what reviewers report; empty string if no reviews were provided",
+    "product_pros": ["strengths reviewers mention about the product"],
+    "product_cons": ["problems or complaints reviewers mention about the product"],
+    "seller_pros": ["positives reviewers mention about the seller, shipping, packaging, or service"],
+    "seller_cons": ["problems reviewers mention about the seller, shipping, service, or authenticity"]
+  }
 }`;
 
 function renderProduct(product: Product): string {
@@ -49,6 +56,9 @@ function renderProduct(product: Product): string {
     description: product.description ?? null,
     bullets: product.bullets,
     specifications: product.specifications,
+    rating: product.rating ?? null,
+    reviewCount: product.reviewCount ?? null,
+    reviews: product.reviews,
   };
   return JSON.stringify(compact, null, 2);
 }
@@ -56,6 +66,8 @@ function renderProduct(product: Product): string {
 /** Build the user message for a product analysis request. */
 export function buildAnalysisPrompt(product: Product): string {
   return `Analyze the claims in the following product listing.
+
+For "review_summary", use ONLY the customer reviews provided in the product data below — do not infer pros/cons from the marketing copy. If no reviews are provided, return an empty summary string and empty arrays. Keep the same careful wording rules: report what reviewers said without asserting a product or seller is fraudulent.
 
 Return ONLY a single JSON object, with no markdown fences or commentary, matching exactly this schema:
 

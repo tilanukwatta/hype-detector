@@ -8,6 +8,7 @@ const product: Product = {
   title: 'Test',
   bullets: [],
   specifications: {},
+  reviews: [],
 };
 
 afterEach(() => vi.restoreAllMocks());

@@ -10,6 +10,7 @@ const baseProduct: Product = {
   title: 'Serum',
   bullets: ['a', 'b'],
   specifications: { Volume: '30ml', Form: 'Serum' },
+  reviews: [],
 };
 
 describe('hashProduct', () => {
