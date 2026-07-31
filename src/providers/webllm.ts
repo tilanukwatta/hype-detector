@@ -82,6 +82,9 @@ export const webllmProvider: LLMProvider = {
   label: 'In-browser (WebLLM)',
   requiresApiKey: false,
   defaultBaseUrl: '',
+  // Prebuilt WebLLM models have a small (~4096-token) context window, so the
+  // prompt builder produces a compact prompt for this provider.
+  smallContext: true,
   suggestedModels: [
     'Llama-3.2-3B-Instruct-q4f16_1-MLC',
     'Llama-3.2-1B-Instruct-q4f16_1-MLC',
@@ -121,7 +124,8 @@ export const webllmProvider: LLMProvider = {
           { role: 'user', content: req.user },
         ],
         temperature: req.settings.temperature,
-        max_tokens: req.settings.maxTokens,
+        // Clamp output so prompt + output fits the model's ~4096-token window.
+        max_tokens: Math.min(req.settings.maxTokens, 2048),
         response_format: { type: 'json_object' },
       });
 

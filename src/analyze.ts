@@ -30,7 +30,7 @@ export async function analyzeProduct(
   try {
     const raw = await provider.complete({
       system: SYSTEM_PROMPT,
-      user: buildAnalysisPrompt(product),
+      user: buildAnalysisPrompt(product, { compact: provider.smallContext }),
       settings,
       signal,
       onProgress,

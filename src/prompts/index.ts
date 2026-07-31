@@ -45,26 +45,77 @@ const RESPONSE_SCHEMA = `{
   }
 }`;
 
-function renderProduct(product: Product): string {
-  // Send structured JSON only — never raw HTML.
+/**
+ * Caps on how much product content goes into the prompt, bounding token usage.
+ * `default` keeps cloud prompts reasonable (and cheaper); `compact` is tight for
+ * small-context local models (e.g. WebLLM models with a 4096-token window).
+ */
+interface PromptLimits {
+  description: number;
+  bullets: number;
+  bulletChars: number;
+  specs: number;
+  specChars: number;
+  reviews: number;
+  reviewChars: number;
+}
+
+const DEFAULT_LIMITS: PromptLimits = {
+  description: 4000,
+  bullets: 20,
+  bulletChars: 300,
+  specs: 30,
+  specChars: 200,
+  reviews: 8,
+  reviewChars: 400,
+};
+
+/** Tight budget for small-context models: keeps prompt + output under ~4096 tokens. */
+const COMPACT_LIMITS: PromptLimits = {
+  description: 800,
+  bullets: 8,
+  bulletChars: 120,
+  specs: 12,
+  specChars: 120,
+  reviews: 4,
+  reviewChars: 220,
+};
+
+const trunc = (s: string, max: number): string => (s.length > max ? `${s.slice(0, max)}…` : s);
+
+function renderProduct(product: Product, limits: PromptLimits): string {
+  // Send structured JSON only — never raw HTML. Every field is bounded so a page
+  // with huge A+ content or many reviews can't produce an oversized prompt.
   const compact = {
     website: product.website,
-    title: product.title,
+    title: trunc(product.title, 300),
     brand: product.brand ?? null,
     price: product.price ?? null,
     category: product.category ?? null,
-    description: product.description ?? null,
-    bullets: product.bullets,
-    specifications: product.specifications,
+    description: product.description ? trunc(product.description, limits.description) : null,
+    bullets: product.bullets.slice(0, limits.bullets).map((b) => trunc(b, limits.bulletChars)),
+    specifications: Object.fromEntries(
+      Object.entries(product.specifications)
+        .slice(0, limits.specs)
+        .map(([k, v]) => [trunc(k, 80), trunc(v, limits.specChars)])
+    ),
     rating: product.rating ?? null,
     reviewCount: product.reviewCount ?? null,
-    reviews: product.reviews,
+    reviews: product.reviews.slice(0, limits.reviews).map((r) => ({
+      rating: r.rating,
+      title: r.title,
+      body: trunc(r.body, limits.reviewChars),
+    })),
   };
   return JSON.stringify(compact, null, 2);
 }
 
-/** Build the user message for a product analysis request. */
-export function buildAnalysisPrompt(product: Product): string {
+/**
+ * Build the user message for a product analysis request. Pass `compact: true`
+ * for small-context models (WebLLM) to fit the model's limited window.
+ */
+export function buildAnalysisPrompt(product: Product, opts: { compact?: boolean } = {}): string {
+  const limits = opts.compact ? COMPACT_LIMITS : DEFAULT_LIMITS;
   return `Analyze the claims in the following product listing.
 
 For "review_summary", use ONLY the customer reviews provided in the product data below — do not infer pros/cons from the marketing copy. If no reviews are provided, return an empty summary string and empty arrays. Keep the same careful wording rules: report what reviewers said without asserting a product or seller is fraudulent.
@@ -75,5 +126,5 @@ ${RESPONSE_SCHEMA}
 
 Product listing (structured data extracted from the page):
 
-${renderProduct(product)}`;
+${renderProduct(product, limits)}`;
 }

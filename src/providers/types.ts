@@ -45,6 +45,9 @@ export interface LLMProvider {
   readonly defaultBaseUrl: string;
   /** A couple of suggested model ids to seed the options UI. */
   readonly suggestedModels: readonly string[];
+  /** True for models with a small context window (e.g. WebLLM) — the prompt
+   * builder produces a compact prompt to fit. */
+  readonly smallContext?: boolean;
   complete(req: CompletionRequest): Promise<string>;
   /**
    * Cheaply verify that the current settings can reach the provider and (where
