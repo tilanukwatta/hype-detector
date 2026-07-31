@@ -81,6 +81,16 @@ export function App() {
           </select>
         </label>
 
+        {provider.id === 'webllm' && (
+          <div className="card" role="note" style={{ fontSize: '13px' }}>
+            Runs a model <strong>entirely in your browser</strong> — no API key, and nothing you
+            analyze leaves your device. Requires <strong>WebGPU</strong> (Chrome/Edge/Brave with
+            hardware acceleration). The chosen model <strong>downloads once</strong> on the first
+            analysis (roughly 1–5 GB depending on the model) and is cached for offline use after
+            that. Smaller models are faster but less accurate.
+          </div>
+        )}
+
         {provider.requiresApiKey && (
           <label style={FIELD_STYLE}>
             <span>API key</span>
@@ -108,20 +118,22 @@ export function App() {
           </datalist>
         </label>
 
-        <label style={FIELD_STYLE}>
-          <span>
-            Base URL{' '}
-            <span className="muted">
-              (optional override
-              {provider.requiresApiKey ? '' : ` — default ${provider.defaultBaseUrl}`})
+        {provider.id !== 'webllm' && (
+          <label style={FIELD_STYLE}>
+            <span>
+              Base URL{' '}
+              <span className="muted">
+                (optional override
+                {provider.requiresApiKey ? '' : ` — default ${provider.defaultBaseUrl}`})
+              </span>
             </span>
-          </span>
-          <input
-            value={settings.baseUrl ?? ''}
-            onChange={(e) => update('baseUrl', e.target.value || undefined)}
-            placeholder={provider.defaultBaseUrl}
-          />
-        </label>
+            <input
+              value={settings.baseUrl ?? ''}
+              onChange={(e) => update('baseUrl', e.target.value || undefined)}
+              placeholder={provider.defaultBaseUrl}
+            />
+          </label>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <label style={FIELD_STYLE}>

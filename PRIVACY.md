@@ -34,15 +34,20 @@ The extension stores the following using your browser's local extension storage
 Analysis only happens when you click **Analyze**. It is never automatic. When you do:
 
 - The extension extracts a **structured summary** of the current product listing (title,
-  brand, price, bullet points, description, and specifications). It does **not** send raw
-  page HTML, and it does **not** scrape or send customer reviews.
+  brand, price, bullet points, description, specifications, and a bounded, truncated sample
+  of visible customer reviews). It does **not** send raw page HTML.
 - That structured product data, together with your API key, is sent **directly from your
   browser to the API endpoint of the provider you configured** (for example OpenAI,
-  Anthropic, Google, OpenRouter, or a local Ollama server).
+  Anthropic, Google, or OpenRouter).
 
 Your use of a third-party provider is governed by **that provider's** privacy policy and
-terms. Please review the policy of whichever provider you choose. If you use a local
-provider such as Ollama, the data does not leave your machine at all.
+terms. Please review the policy of whichever provider you choose.
+
+**Local providers.** If you use **Ollama** or the **in-browser (WebLLM)** provider, the
+product data never leaves your machine — inference runs locally. For WebLLM, the model
+**weights** are downloaded once from public hosts (HuggingFace and GitHub) and cached in your
+browser; only the download request is made to those hosts, and it contains **none** of your
+product data or browsing information. After the download, WebLLM works fully offline.
 
 ## What we do not do
 
@@ -63,6 +68,9 @@ provider such as Ollama, the data does not leave your machine at all.
 - **Host permissions** for provider API endpoints (and `localhost` for Ollama) — allow
   the browser to send your analysis request to the provider you selected. These hosts are
   only contacted when you run an analysis.
+- **Host permissions** for HuggingFace and GitHub — only used by the in-browser (WebLLM)
+  provider to download model weights the first time, and contacted only if you choose that
+  provider. They receive no product or browsing data.
 
 ## Children
 

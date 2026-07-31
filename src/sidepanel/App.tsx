@@ -11,7 +11,7 @@ import { useApplyTheme, useSettings } from '@/ui/hooks';
 type State =
   | { phase: 'idle' }
   | { phase: 'extracting' }
-  | { phase: 'analyzing'; product: Product }
+  | { phase: 'analyzing'; product: Product; progress?: string }
   | { phase: 'done'; product: Product; analysis: Analysis; cached: boolean }
   | { phase: 'notice'; message: string; tone: 'info' | 'error' };
 
@@ -64,7 +64,10 @@ export function App() {
     }
 
     setState({ phase: 'analyzing', product });
-    const result = await analyzeProduct(product, currentSettings);
+    const result = await analyzeProduct(product, currentSettings, undefined, (update) => {
+      const label = update.percent != null ? `${update.text} (${update.percent}%)` : update.text;
+      setState({ phase: 'analyzing', product, progress: label });
+    });
     if (!result.ok) {
       setState({ phase: 'notice', tone: 'error', message: result.error });
       return;
@@ -115,7 +118,9 @@ export function App() {
 
       {state.phase === 'extracting' && <p className="muted">Reading the product page…</p>}
       {state.phase === 'analyzing' && (
-        <p className="muted">Analyzing claims with {getProvider(settings.provider).label}…</p>
+        <p className="muted">
+          {state.progress ?? `Analyzing claims with ${getProvider(settings.provider).label}…`}
+        </p>
       )}
 
       {state.phase === 'notice' && (

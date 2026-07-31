@@ -5,6 +5,7 @@ import { anthropicProvider } from './anthropic';
 import { geminiProvider } from './gemini';
 import { openrouterProvider } from './openrouter';
 import { ollamaProvider } from './ollama';
+import { webllmProvider } from './webllm';
 
 /** Registry of all supported providers, keyed by id. */
 export const PROVIDERS: Record<ProviderId, LLMProvider> = {
@@ -13,6 +14,7 @@ export const PROVIDERS: Record<ProviderId, LLMProvider> = {
   gemini: geminiProvider,
   openrouter: openrouterProvider,
   ollama: ollamaProvider,
+  webllm: webllmProvider,
 };
 
 export function getProvider(id: ProviderId): LLMProvider {
@@ -26,7 +28,14 @@ export const PROVIDER_LIST: readonly LLMProvider[] = [
   geminiProvider,
   openrouterProvider,
   ollamaProvider,
+  webllmProvider,
 ];
 
 export { ProviderError } from './types';
-export type { LLMProvider, CompletionRequest, ValidationResult } from './types';
+export type {
+  LLMProvider,
+  CompletionRequest,
+  ValidationResult,
+  ProviderProgress,
+  ProgressCallback,
+} from './types';
