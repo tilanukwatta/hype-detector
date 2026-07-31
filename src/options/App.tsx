@@ -106,16 +106,29 @@ export function App() {
 
         <label style={FIELD_STYLE}>
           <span>Model</span>
-          <input
-            list="model-suggestions"
-            value={settings.model}
-            onChange={(e) => update('model', e.target.value)}
-          />
-          <datalist id="model-suggestions">
-            {provider.suggestedModels.map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
+          {provider.id === 'webllm' ? (
+            // Fixed set of prebuilt models — a select shows them all clearly.
+            <select value={settings.model} onChange={(e) => update('model', e.target.value)}>
+              {provider.suggestedModels.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <>
+              <input
+                list="model-suggestions"
+                value={settings.model}
+                onChange={(e) => update('model', e.target.value)}
+              />
+              <datalist id="model-suggestions">
+                {provider.suggestedModels.map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
+            </>
+          )}
         </label>
 
         {provider.id !== 'webllm' && (

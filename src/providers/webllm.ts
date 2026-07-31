@@ -21,6 +21,36 @@ function hasWebGpu(): boolean {
   return typeof navigator !== 'undefined' && 'gpu' in navigator;
 }
 
+/** Extract a readable message from any thrown value (WebLLM/worker errors are
+ * often plain objects or ErrorEvents once proxied across the worker boundary). */
+function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (error && typeof error === 'object') {
+    const obj = error as { message?: unknown; error?: unknown };
+    if (typeof obj.message === 'string' && obj.message) return obj.message;
+    if (typeof obj.error === 'string' && obj.error) return obj.error;
+    try {
+      return JSON.stringify(error);
+    } catch {
+      /* fall through */
+    }
+  }
+  return String(error);
+}
+
+/** Dispose the cached worker/engine so the next attempt starts clean. */
+function resetEngine(): void {
+  try {
+    worker?.terminate();
+  } catch {
+    /* ignore */
+  }
+  worker = null;
+  engine = null;
+  loadedModel = null;
+}
+
 async function getEngine(
   model: string,
   onProgress?: ProgressCallback
@@ -68,7 +98,16 @@ export const webllmProvider: LLMProvider = {
       );
     }
 
-    const mlcEngine = await getEngine(req.settings.model, req.onProgress);
+    let mlcEngine: MLCEngineInterface;
+    try {
+      mlcEngine = await getEngine(req.settings.model, req.onProgress);
+    } catch (error) {
+      resetEngine(); // so a retry re-initializes from scratch
+      throw new ProviderError(
+        `Could not load the in-browser model (${req.settings.model}): ${describeError(error)}`,
+        { provider: this.id, cause: error }
+      );
+    }
 
     // Non-streaming create() has no signal param; interrupt on abort instead.
     const onAbort = () => mlcEngine.interruptGenerate();
@@ -91,6 +130,13 @@ export const webllmProvider: LLMProvider = {
         throw new ProviderError('The model returned an empty response.', { provider: this.id });
       }
       return content;
+    } catch (error) {
+      if (req.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      if (error instanceof ProviderError) throw error;
+      throw new ProviderError(`The in-browser model failed: ${describeError(error)}`, {
+        provider: this.id,
+        cause: error,
+      });
     } finally {
       req.signal?.removeEventListener('abort', onAbort);
     }

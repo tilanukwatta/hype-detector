@@ -74,6 +74,14 @@ describe('webllm provider', () => {
     ).rejects.toThrow(/WebGPU is not available/);
   });
 
+  it('wraps a model-load failure in a descriptive error (and resets for retry)', async () => {
+    setWebGpu(true);
+    createEngine.mockRejectedValueOnce(new Error('Failed to fetch model shard (404)'));
+    await expect(
+      webllmProvider.complete({ system: 's', user: 'u', settings: settingsFor() })
+    ).rejects.toThrow(/Could not load the in-browser model.*404/);
+  });
+
   it('complete() runs a JSON chat completion with the selected model', async () => {
     setWebGpu(true);
     engine.chat.completions.create.mockResolvedValue({
@@ -99,6 +107,15 @@ describe('webllm provider', () => {
     expect(body.messages[0]).toEqual({ role: 'system', content: 'sys' });
     expect(out).toBe('{"credibility_score":70}');
     expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({ stage: 'generate' }));
+  });
+
+  it('wraps a generation failure in a descriptive error', async () => {
+    setWebGpu(true);
+    // Engine is cached from the previous test; make generation fail.
+    engine.chat.completions.create.mockRejectedValue(new Error('WebGPU shader compile failed'));
+    await expect(
+      webllmProvider.complete({ system: 's', user: 'u', settings: settingsFor() })
+    ).rejects.toThrow(/in-browser model failed.*shader compile/);
   });
 
   it('complete() throws on empty output', async () => {
