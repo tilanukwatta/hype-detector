@@ -18,8 +18,16 @@ let engine: MLCEngineInterface | null = null;
 let loadedModel: string | null = null;
 
 // Minimal WebGPU typings (lib.dom may not include them) to avoid `any`.
+interface GpuAdapterInfoLike {
+  vendor?: string;
+  architecture?: string;
+  device?: string;
+  description?: string;
+}
 interface GpuAdapterLike {
   isFallbackAdapter?: boolean;
+  info?: GpuAdapterInfoLike;
+  requestAdapterInfo?: () => Promise<GpuAdapterInfoLike>;
 }
 interface GpuLike {
   requestAdapter(options?: { powerPreference?: string }): Promise<GpuAdapterLike | null>;
@@ -30,11 +38,15 @@ interface GpuStatus {
   message: string;
 }
 
+/** Known software (CPU) renderers that report as a normal adapter but are far too slow. */
+const SOFTWARE_RENDERER = /swiftshader|llvmpipe|software|basic render|warp|lavapipe/i;
+
 /**
  * Check for a *usable* WebGPU GPU. `'gpu' in navigator` isn't enough: a machine
- * with no GPU often still exposes WebGPU via a software (CPU) fallback adapter,
- * which "works" but is far too slow to run a model — so we detect that and
- * refuse up front instead of downloading gigabytes and then hanging.
+ * with no GPU often still exposes WebGPU via a software (CPU) renderer, which
+ * "works" but is far too slow — so we detect that (via the fallback flag and the
+ * adapter name) and refuse up front instead of downloading gigabytes and hanging.
+ * The adapter name is surfaced so users can see exactly what was detected.
  */
 async function checkWebGpu(): Promise<GpuStatus> {
   const gpu = (navigator as unknown as { gpu?: GpuLike }).gpu;
@@ -60,17 +72,24 @@ async function checkWebGpu(): Promise<GpuStatus> {
         'No WebGPU adapter was found. In-browser models need a compatible GPU with hardware acceleration; use a cloud provider instead.',
     };
   }
-  if (adapter.isFallbackAdapter) {
+
+  const info =
+    adapter.info ?? (await adapter.requestAdapterInfo?.().catch(() => undefined)) ?? undefined;
+  const label = [info?.vendor, info?.architecture, info?.device, info?.description]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  if (adapter.isFallbackAdapter || (label && SOFTWARE_RENDERER.test(label))) {
     return {
       ok: false,
-      message:
-        'Only a software (CPU) WebGPU fallback is available on this machine — far too slow to run a model. A hardware GPU is required; use a cloud provider instead.',
+      message: `Only a software (CPU) WebGPU renderer is available${label ? ` (${label})` : ''} — far too slow to run a model. A hardware GPU is required; use a cloud provider instead.`,
     };
   }
+
   return {
     ok: true,
-    message:
-      'WebGPU (hardware) is available. The selected model downloads on the first analysis (one-time), then runs fully offline.',
+    message: `A WebGPU adapter is available${label ? `: ${label}` : ''}. The model downloads on the first analysis, then runs offline. Note: integrated or low-end GPUs can still be too slow — use a cloud provider for speed.`,
   };
 }
 

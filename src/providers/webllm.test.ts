@@ -36,7 +36,7 @@ function streamOf(text: string) {
   };
 }
 
-type GpuMode = 'hardware' | 'fallback' | 'no-adapter' | 'absent';
+type GpuMode = 'hardware' | 'fallback' | 'no-adapter' | 'software-named' | 'absent';
 
 function setWebGpu(mode: GpuMode) {
   if (mode === 'absent') {
@@ -44,8 +44,19 @@ function setWebGpu(mode: GpuMode) {
     delete globalThis.navigator.gpu;
     return;
   }
-  const requestAdapter = async () =>
-    mode === 'no-adapter' ? null : { isFallbackAdapter: mode === 'fallback' };
+  const requestAdapter = async () => {
+    if (mode === 'no-adapter') return null;
+    if (mode === 'software-named') {
+      return {
+        isFallbackAdapter: false,
+        info: { vendor: 'google', description: 'SwiftShader Device' },
+      };
+    }
+    return {
+      isFallbackAdapter: mode === 'fallback',
+      info: { vendor: 'intel', architecture: 'gen-12' },
+    };
+  };
   Object.defineProperty(globalThis.navigator, 'gpu', {
     value: { requestAdapter },
     configurable: true,
@@ -98,6 +109,21 @@ describe('webllm provider', () => {
     const result = await webllmProvider.validate(settingsFor());
     expect(result.ok).toBe(false);
     expect(result.message).toMatch(/No WebGPU adapter/);
+  });
+
+  it('validate() rejects a software renderer detected by name (e.g. SwiftShader)', async () => {
+    setWebGpu('software-named');
+    const result = await webllmProvider.validate(settingsFor());
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/software \(CPU\)/i);
+    expect(result.message).toMatch(/SwiftShader/);
+  });
+
+  it('validate() surfaces the adapter name when usable', async () => {
+    setWebGpu('hardware');
+    const result = await webllmProvider.validate(settingsFor());
+    expect(result.ok).toBe(true);
+    expect(result.message).toMatch(/intel/i);
   });
 
   it('complete() refuses (before downloading) when WebGPU is unavailable', async () => {
