@@ -168,7 +168,8 @@ git push --follow-tags # the Release workflow builds, zips, and attaches it to a
 
 Download the `.zip` from the resulting GitHub Release and upload it to the
 [Chrome Web Store](https://chrome.google.com/webstore/devconsole) and
-[Edge Add-ons](https://partner.microsoft.com/dashboard/microsoftedge).
+[Edge Add-ons](https://partner.microsoft.com/dashboard/microsoftedge). See
+[STORE.md](./STORE.md) for the listing copy, permission justifications, and data-use answers.
 
 ## License
 
