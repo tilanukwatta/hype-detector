@@ -114,6 +114,11 @@ export const webllmProvider: LLMProvider = {
 
     req.onProgress?.({ stage: 'generate', text: 'Generating the analysis…' });
 
+    // Interrupt immediately on abort — including while the model is still in
+    // prefill (before any tokens stream), where the per-chunk check can't fire.
+    const onAbort = () => void mlcEngine.interruptGenerate();
+    req.signal?.addEventListener('abort', onAbort, { once: true });
+
     try {
       // Stream so the UI shows live progress instead of a frozen spinner during
       // the slow local generation.
@@ -161,6 +166,8 @@ export const webllmProvider: LLMProvider = {
         provider: this.id,
         cause: error,
       });
+    } finally {
+      req.signal?.removeEventListener('abort', onAbort);
     }
   },
 

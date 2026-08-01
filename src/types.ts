@@ -78,7 +78,7 @@ export const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
   model: 'claude-sonnet-5',
   temperature: 0.2,
-  maxTokens: 1500,
+  maxTokens: 1536,
   theme: 'system',
   highContrast: false,
 };
