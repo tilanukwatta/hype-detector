@@ -43,10 +43,10 @@ can decide for yourself.
 Its goal is to answer one question: how trustworthy are the claims in this listing?
 
 • Bring your own LLM — OpenAI, Anthropic, Google Gemini, or OpenRouter with your own API key,
-  a local Ollama server, or a fully in-browser model (WebLLM/WebGPU, experimental).
+  or a local Ollama server. No subscription, no middleman.
 • Private by design — no accounts, no analytics, no tracking, no telemetry. Your API key is
-  stored only on your device, and your data goes directly to the provider you choose (or, for
-  local models, never leaves your device).
+  stored only on your device, and your data goes directly to the provider you choose (and never
+  leaves your device with a local Ollama model).
 • Balanced, evidence-oriented — it distinguishes facts from marketing, highlights missing
   evidence, summarizes what reviewers say (pros and cons of the product and seller), and never
   claims a product is "fake" — only whether evidence is present.
@@ -63,8 +63,12 @@ more sites planned.
 Open source (MIT): https://github.com/tilanukwatta/hype-detector
 ```
 
-**Privacy policy URL** (required): host `PRIVACY.md` and paste its URL — e.g. enable GitHub
-Pages on the repo, or use the raw/rendered file. Example: `https://tilanukwatta.github.io/hype-detector/PRIVACY` (set up Pages first).
+**Privacy policy URL** (required):
+
+> https://github.com/tilanukwatta/hype-detector/blob/main/PRIVACY.md
+
+(The GitHub-rendered page is public and accepted by the store. Use this URL, not the
+`raw.githubusercontent.com` one. A nicer GitHub Pages URL is optional.)
 
 ---
 
