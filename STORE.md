@@ -5,6 +5,21 @@ console's "Store listing" and "Privacy practices" tabs.
 
 ---
 
+## Which build to upload
+
+Upload the **store build**, which excludes the experimental WebLLM provider so the package
+contains **no remotely hosted code** (a Manifest V3 requirement):
+
+```bash
+npm run zip:store   # → web-ext-artifacts/hype-detector-vX.Y.Z-store.zip
+```
+
+The full build (with WebLLM) is distributed only via the GitHub Release / unpacked install —
+do **not** upload it to the store, or the "remote code" answer becomes "Yes" and review is
+likely to reject it.
+
+---
+
 ## Store listing tab
 
 **Item name:** Hype Detector
@@ -81,9 +96,9 @@ The console asks you to justify each permission. Suggested text:
   openrouter.ai:** Send the analysis request to the LLM provider the user selected, using the
   user's own API key.
 - **Host permissions — localhost / 127.0.0.1:** Connect to a user-run local Ollama server.
-- **Host permissions — huggingface.co, raw.githubusercontent.com:** Download the on-device
-  model (the experimental in-browser WebLLM option) one time; cached afterward. No user or
-  product data is sent to these hosts.
+
+_(The store build has no WebLLM, so it does **not** request the huggingface.co /
+raw.githubusercontent.com hosts — don't list them.)_
 
 **Single purpose:**
 
@@ -118,18 +133,18 @@ user's browser directly to the LLM provider the user chose (or nowhere, for loca
 
 ---
 
-## Known review risk: remotely hosted code (WebLLM)
+## Remote code question
 
-Chrome's MV3 policy prohibits remotely hosted **code**. The cloud and Ollama providers only
-exchange **data** (fine). The experimental **WebLLM** option, however, downloads compiled
-`.wasm` model libraries at runtime from GitHub, which a reviewer may classify as remote code.
+**Answer: No, I am not using remote code.** (Leave the justification box empty.)
 
-Options if this is flagged (or to avoid it up front):
+This is true because you upload the **store build**, which excludes WebLLM. Cloud and Ollama
+providers only exchange **data**, never code. WebLLM (the only part that would download
+`.wasm` at runtime) is not in the store build — it's tree-shaken out, and the manifest omits
+the huggingface.co / raw.githubusercontent.com hosts and the `wasm-unsafe-eval` CSP. WebLLM
+still ships in the GitHub Release / unpacked build for power users.
 
-1. Ship a **store build with WebLLM hidden** (cloud + Ollama only); keep WebLLM available via
-   the GitHub Release / unpacked install. Recommended for a smooth first approval.
-2. Bundle the WASM libraries locally (larger package).
-3. Submit as-is and respond if flagged.
+If you ever upload the **full** build instead, the honest answer becomes "Yes" and MV3's
+no-remotely-hosted-code policy will likely reject it — so keep uploading the store build.
 
 ---
 
