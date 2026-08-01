@@ -1,7 +1,7 @@
 {
   "name": "hype-detector",
-  "version": "0.2.0",
-  "description": "Open-source browser extension that helps consumers critically evaluate online product listings using LLMs. Separate evidence from marketing.",
+  "version": "0.2.1",
+  "description": "Separate evidence from marketing: analyze the claims in a product listing with your own LLM key or a local model.",
   "license": "MIT",
   "author": "Tilan Ukwatta",
   "type": "module",
