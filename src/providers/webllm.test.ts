@@ -36,13 +36,20 @@ function streamOf(text: string) {
   };
 }
 
-function setWebGpu(present: boolean) {
-  if (present) {
-    Object.defineProperty(globalThis.navigator, 'gpu', { value: {}, configurable: true });
-  } else {
+type GpuMode = 'hardware' | 'fallback' | 'no-adapter' | 'absent';
+
+function setWebGpu(mode: GpuMode) {
+  if (mode === 'absent') {
     // @ts-expect-error test cleanup
     delete globalThis.navigator.gpu;
+    return;
   }
+  const requestAdapter = async () =>
+    mode === 'no-adapter' ? null : { isFallbackAdapter: mode === 'fallback' };
+  Object.defineProperty(globalThis.navigator, 'gpu', {
+    value: { requestAdapter },
+    configurable: true,
+  });
 }
 
 beforeEach(() => {
@@ -58,7 +65,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  setWebGpu(false);
+  setWebGpu('absent');
   vi.unstubAllGlobals();
 });
 
@@ -71,23 +78,46 @@ describe('webllm provider', () => {
   });
 
   it('validate() reports WebGPU availability', async () => {
-    setWebGpu(true);
+    setWebGpu('hardware');
     expect((await webllmProvider.validate(settingsFor())).ok).toBe(true);
-    setWebGpu(false);
+    setWebGpu('absent');
     const missing = await webllmProvider.validate(settingsFor());
     expect(missing.ok).toBe(false);
     expect(missing.message).toMatch(/WebGPU is not available/);
   });
 
-  it('complete() fails clearly when WebGPU is unavailable', async () => {
-    setWebGpu(false);
+  it('validate() rejects a software (CPU) fallback adapter', async () => {
+    setWebGpu('fallback');
+    const result = await webllmProvider.validate(settingsFor());
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/software \(CPU\)/i);
+  });
+
+  it('validate() rejects when no GPU adapter is found', async () => {
+    setWebGpu('no-adapter');
+    const result = await webllmProvider.validate(settingsFor());
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/No WebGPU adapter/);
+  });
+
+  it('complete() refuses (before downloading) when WebGPU is unavailable', async () => {
+    setWebGpu('absent');
     await expect(
       webllmProvider.complete({ system: 's', user: 'u', settings: settingsFor() })
     ).rejects.toThrow(/WebGPU is not available/);
+    expect(createEngine).not.toHaveBeenCalled();
+  });
+
+  it('complete() refuses on a software fallback (no multi-GB download)', async () => {
+    setWebGpu('fallback');
+    await expect(
+      webllmProvider.complete({ system: 's', user: 'u', settings: settingsFor() })
+    ).rejects.toThrow(/software \(CPU\)/i);
+    expect(createEngine).not.toHaveBeenCalled();
   });
 
   it('wraps a model-load failure in a descriptive error (and resets for retry)', async () => {
-    setWebGpu(true);
+    setWebGpu('hardware');
     createEngine.mockRejectedValueOnce(new Error('Failed to fetch model shard (404)'));
     await expect(
       webllmProvider.complete({ system: 's', user: 'u', settings: settingsFor() })
@@ -95,7 +125,7 @@ describe('webllm provider', () => {
   });
 
   it('complete() runs a JSON chat completion with the selected model', async () => {
-    setWebGpu(true);
+    setWebGpu('hardware');
     engine.chat.completions.create.mockResolvedValue(streamOf('{"credibility_score":70}'));
     const onProgress = vi.fn();
 
@@ -122,7 +152,7 @@ describe('webllm provider', () => {
   });
 
   it('wraps a generation failure in a descriptive error', async () => {
-    setWebGpu(true);
+    setWebGpu('hardware');
     // Engine is cached from the previous test; make generation fail.
     engine.chat.completions.create.mockRejectedValue(new Error('WebGPU shader compile failed'));
     await expect(
@@ -131,7 +161,7 @@ describe('webllm provider', () => {
   });
 
   it('complete() throws on empty output', async () => {
-    setWebGpu(true);
+    setWebGpu('hardware');
     engine.chat.completions.create.mockResolvedValue(streamOf(''));
     await expect(
       webllmProvider.complete({ system: 's', user: 'u', settings: settingsFor() })
