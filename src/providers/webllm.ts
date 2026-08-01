@@ -17,8 +17,61 @@ let worker: Worker | null = null;
 let engine: MLCEngineInterface | null = null;
 let loadedModel: string | null = null;
 
-function hasWebGpu(): boolean {
-  return typeof navigator !== 'undefined' && 'gpu' in navigator;
+// Minimal WebGPU typings (lib.dom may not include them) to avoid `any`.
+interface GpuAdapterLike {
+  isFallbackAdapter?: boolean;
+}
+interface GpuLike {
+  requestAdapter(options?: { powerPreference?: string }): Promise<GpuAdapterLike | null>;
+}
+
+interface GpuStatus {
+  ok: boolean;
+  message: string;
+}
+
+/**
+ * Check for a *usable* WebGPU GPU. `'gpu' in navigator` isn't enough: a machine
+ * with no GPU often still exposes WebGPU via a software (CPU) fallback adapter,
+ * which "works" but is far too slow to run a model — so we detect that and
+ * refuse up front instead of downloading gigabytes and then hanging.
+ */
+async function checkWebGpu(): Promise<GpuStatus> {
+  const gpu = (navigator as unknown as { gpu?: GpuLike }).gpu;
+  if (typeof navigator === 'undefined' || !gpu) {
+    return {
+      ok: false,
+      message:
+        'WebGPU is not available in this browser. Use Chrome/Edge/Brave with hardware acceleration enabled.',
+    };
+  }
+
+  let adapter: GpuAdapterLike | null = null;
+  try {
+    adapter = await gpu.requestAdapter({ powerPreference: 'high-performance' });
+  } catch {
+    adapter = null;
+  }
+
+  if (!adapter) {
+    return {
+      ok: false,
+      message:
+        'No WebGPU adapter was found. In-browser models need a compatible GPU with hardware acceleration; use a cloud provider instead.',
+    };
+  }
+  if (adapter.isFallbackAdapter) {
+    return {
+      ok: false,
+      message:
+        'Only a software (CPU) WebGPU fallback is available on this machine — far too slow to run a model. A hardware GPU is required; use a cloud provider instead.',
+    };
+  }
+  return {
+    ok: true,
+    message:
+      'WebGPU (hardware) is available. The selected model downloads on the first analysis (one-time), then runs fully offline.',
+  };
 }
 
 /** Extract a readable message from any thrown value (WebLLM/worker errors are
@@ -94,11 +147,10 @@ export const webllmProvider: LLMProvider = {
   ],
 
   async complete(req) {
-    if (!hasWebGpu()) {
-      throw new ProviderError(
-        'WebGPU is not available in this browser, so the in-browser model cannot run. Use a Chromium browser with hardware acceleration enabled.',
-        { provider: this.id }
-      );
+    // Refuse before the (large) model download if there's no usable GPU.
+    const gpu = await checkWebGpu();
+    if (!gpu.ok) {
+      throw new ProviderError(gpu.message, { provider: this.id });
     }
 
     let mlcEngine: MLCEngineInterface;
@@ -171,20 +223,9 @@ export const webllmProvider: LLMProvider = {
     }
   },
 
-  // Can't cheaply verify a model without downloading it, so validate WebGPU
-  // availability — the actual prerequisite for this provider.
-  async validate() {
-    if (hasWebGpu()) {
-      return {
-        ok: true,
-        message:
-          'WebGPU is available. The selected model downloads on the first analysis (one-time), then runs fully offline.',
-      };
-    }
-    return {
-      ok: false,
-      message:
-        'WebGPU is not available in this browser. Use Chrome/Edge/Brave with hardware acceleration enabled.',
-    };
+  // Can't cheaply verify a model without downloading it, so validate that a
+  // usable (hardware) WebGPU adapter exists — the real prerequisite here.
+  validate() {
+    return checkWebGpu();
   },
 };
