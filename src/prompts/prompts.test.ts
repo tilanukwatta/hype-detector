@@ -51,6 +51,22 @@ describe('prompts', () => {
     expect(prompt).toContain('use ONLY the customer reviews');
   });
 
+  it('bounds prompt size in compact mode for small-context models', () => {
+    const huge: Product = {
+      ...product,
+      description: 'x'.repeat(20000),
+      bullets: Array.from({ length: 40 }, (_, i) => `bullet ${i} ` + 'y'.repeat(500)),
+      reviews: Array.from({ length: 20 }, (_, i) => ({ body: `review ${i} ` + 'z'.repeat(1000) })),
+    };
+    const full = buildAnalysisPrompt(huge);
+    const compact = buildAnalysisPrompt(huge, { compact: true });
+    expect(compact.length).toBeLessThan(full.length);
+    // Compact stays small enough to fit a ~4096-token window with room for output.
+    expect(compact.length).toBeLessThan(9000);
+    // Description is truncated, not sent whole.
+    expect(compact).not.toContain('x'.repeat(1000));
+  });
+
   it('is stable for a given product (snapshot)', () => {
     expect(buildAnalysisPrompt(product)).toMatchSnapshot();
   });

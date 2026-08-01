@@ -81,6 +81,18 @@ export function App() {
           </select>
         </label>
 
+        {provider.id === 'webllm' && (
+          <div className="card" role="note" style={{ fontSize: '13px' }}>
+            <strong>Experimental.</strong> Runs a model <strong>entirely in your browser</strong> —
+            no API key, and nothing you analyze leaves your device. Requires <strong>WebGPU</strong>{' '}
+            (Chrome/Edge/Brave with hardware acceleration). The model{' '}
+            <strong>downloads once</strong> on the first analysis (roughly 1–5 GB) and is cached for
+            offline use afterward. <strong>Expect it to be slow</strong> — analysis can take tens of
+            seconds to a few minutes depending on the model and your GPU. Smaller models are faster
+            but less accurate. For fast results, use a cloud provider instead.
+          </div>
+        )}
+
         {provider.requiresApiKey && (
           <label style={FIELD_STYLE}>
             <span>API key</span>
@@ -96,32 +108,47 @@ export function App() {
 
         <label style={FIELD_STYLE}>
           <span>Model</span>
-          <input
-            list="model-suggestions"
-            value={settings.model}
-            onChange={(e) => update('model', e.target.value)}
-          />
-          <datalist id="model-suggestions">
-            {provider.suggestedModels.map((m) => (
-              <option key={m} value={m} />
-            ))}
-          </datalist>
+          {provider.id === 'webllm' ? (
+            // Fixed set of prebuilt models — a select shows them all clearly.
+            <select value={settings.model} onChange={(e) => update('model', e.target.value)}>
+              {provider.suggestedModels.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <>
+              <input
+                list="model-suggestions"
+                value={settings.model}
+                onChange={(e) => update('model', e.target.value)}
+              />
+              <datalist id="model-suggestions">
+                {provider.suggestedModels.map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
+            </>
+          )}
         </label>
 
-        <label style={FIELD_STYLE}>
-          <span>
-            Base URL{' '}
-            <span className="muted">
-              (optional override
-              {provider.requiresApiKey ? '' : ` — default ${provider.defaultBaseUrl}`})
+        {provider.id !== 'webllm' && (
+          <label style={FIELD_STYLE}>
+            <span>
+              Base URL{' '}
+              <span className="muted">
+                (optional override
+                {provider.requiresApiKey ? '' : ` — default ${provider.defaultBaseUrl}`})
+              </span>
             </span>
-          </span>
-          <input
-            value={settings.baseUrl ?? ''}
-            onChange={(e) => update('baseUrl', e.target.value || undefined)}
-            placeholder={provider.defaultBaseUrl}
-          />
-        </label>
+            <input
+              value={settings.baseUrl ?? ''}
+              onChange={(e) => update('baseUrl', e.target.value || undefined)}
+              placeholder={provider.defaultBaseUrl}
+            />
+          </label>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <label style={FIELD_STYLE}>

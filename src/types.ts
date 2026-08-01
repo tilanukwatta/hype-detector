@@ -10,7 +10,14 @@ import { z } from 'zod';
 // Providers
 // ---------------------------------------------------------------------------
 
-export const PROVIDER_IDS = ['openai', 'anthropic', 'gemini', 'openrouter', 'ollama'] as const;
+export const PROVIDER_IDS = [
+  'openai',
+  'anthropic',
+  'gemini',
+  'openrouter',
+  'ollama',
+  'webllm',
+] as const;
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 
 // ---------------------------------------------------------------------------
@@ -71,7 +78,7 @@ export const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
   model: 'claude-sonnet-5',
   temperature: 0.2,
-  maxTokens: 1500,
+  maxTokens: 1536,
   theme: 'system',
   highContrast: false,
 };

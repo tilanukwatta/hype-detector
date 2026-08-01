@@ -1,6 +1,6 @@
 import type { AnalysisResult, Product, Settings } from '@/types';
 import { AnalysisSchema } from '@/types';
-import { getProvider, ProviderError } from '@/providers';
+import { getProvider, ProviderError, type ProgressCallback } from '@/providers';
 import { buildAnalysisPrompt, SYSTEM_PROMPT } from '@/prompts';
 import { parseAnalysis } from '@/parser';
 
@@ -13,7 +13,8 @@ import { parseAnalysis } from '@/parser';
 export async function analyzeProduct(
   product: Product,
   settings: Settings,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  onProgress?: ProgressCallback
 ): Promise<AnalysisResult> {
   const provider = getProvider(settings.provider);
 
@@ -29,9 +30,10 @@ export async function analyzeProduct(
   try {
     const raw = await provider.complete({
       system: SYSTEM_PROMPT,
-      user: buildAnalysisPrompt(product),
+      user: buildAnalysisPrompt(product, { compact: provider.smallContext }),
       settings,
       signal,
+      onProgress,
     });
     return parseAnalysis(raw);
   } catch (error) {

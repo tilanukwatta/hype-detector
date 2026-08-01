@@ -222,7 +222,8 @@ Support:
 - Anthropic
 - Gemini
 - OpenRouter
-- Ollama
+- Ollama (local server)
+- WebLLM (in-browser via WebGPU; no key, no server — model downloaded once, then offline)
 
 Future providers should be easy to add.
 

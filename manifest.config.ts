@@ -68,5 +68,16 @@ export default defineManifest({
     'https://openrouter.ai/*',
     'http://localhost/*',
     'http://127.0.0.1/*',
+    // WebLLM model downloads (one-time, then cached): weights from HuggingFace,
+    // wasm libraries from GitHub. No inference data is sent to these hosts.
+    'https://huggingface.co/*',
+    'https://*.huggingface.co/*',
+    'https://*.hf.co/*',
+    'https://raw.githubusercontent.com/*',
   ],
+  // WebLLM runs WebAssembly in the extension pages (side panel/options), which
+  // requires 'wasm-unsafe-eval'.
+  content_security_policy: {
+    extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+  },
 });

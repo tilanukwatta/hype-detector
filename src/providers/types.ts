@@ -1,5 +1,15 @@
 import type { ProviderId, Settings } from '@/types';
 
+/** Progress update emitted by providers that do slow local work (e.g. WebLLM model download). */
+export interface ProviderProgress {
+  stage: 'download' | 'generate';
+  text: string;
+  /** 0–100 when known (e.g. model download percentage). */
+  percent?: number;
+}
+
+export type ProgressCallback = (update: ProviderProgress) => void;
+
 /** A single analysis request, already split into system + user messages. */
 export interface CompletionRequest {
   system: string;
@@ -7,6 +17,11 @@ export interface CompletionRequest {
   settings: Settings;
   /** Optional abort signal so the UI can cancel in-flight requests. */
   signal?: AbortSignal;
+  /**
+   * Optional progress callback. Only providers with a slow local phase (WebLLM's
+   * one-time model download) emit; network providers ignore it.
+   */
+  onProgress?: ProgressCallback;
 }
 
 /** Outcome of a lightweight connection / API-key check. */
@@ -30,6 +45,9 @@ export interface LLMProvider {
   readonly defaultBaseUrl: string;
   /** A couple of suggested model ids to seed the options UI. */
   readonly suggestedModels: readonly string[];
+  /** True for models with a small context window (e.g. WebLLM) — the prompt
+   * builder produces a compact prompt to fit. */
+  readonly smallContext?: boolean;
   complete(req: CompletionRequest): Promise<string>;
   /**
    * Cheaply verify that the current settings can reach the provider and (where

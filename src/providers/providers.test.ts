@@ -34,9 +34,9 @@ async function lastCall(fn: ReturnType<typeof mockFetch>) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('registry', () => {
-  it('exposes all five providers', () => {
+  it('exposes all six providers', () => {
     expect(PROVIDER_LIST.map((p) => p.id).sort()).toEqual(
-      ['anthropic', 'gemini', 'ollama', 'openai', 'openrouter'].sort()
+      ['anthropic', 'gemini', 'ollama', 'openai', 'openrouter', 'webllm'].sort()
     );
   });
 });

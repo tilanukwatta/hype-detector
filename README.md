@@ -10,8 +10,9 @@ seller makes** — flagging vague marketing language, unsupported or scientific 
 missing evidence — and explains its reasoning so you can decide for yourself.
 
 - **No backend.** Everything runs in your browser.
-- **Bring your own API key.** OpenAI, Anthropic, Google Gemini, OpenRouter, or a local
-  Ollama model. No subscription, no middleman.
+- **Bring your own API key** — OpenAI, Anthropic, Google Gemini, OpenRouter — or run a
+  model **locally** with Ollama or fully **in-browser** (WebLLM/WebGPU, no key, no server).
+  No subscription, no middleman.
 - **Private by design.** No analytics, tracking, telemetry, or remote logging. Your API
   key and browsing stay on your device.
 
@@ -70,7 +71,8 @@ The extension card should show no errors. (If it ever does, click **Clear all**,
    - **Anthropic** — `claude-sonnet-5`
    - **OpenAI** — `gpt-4o-mini`
    - **Google Gemini** — `gemini-1.5-flash`
-   - **Ollama** (local, no key) — see below
+   - **In-browser (WebLLM)** (no key, runs on your GPU) — see below
+   - **Ollama** (local server, no key) — see below
 3. Click **Save settings**, then **Test connection** to confirm the key _and_ the selected model work before analyzing.
 
 Your API key is stored only on your device — see the [Privacy Policy](./PRIVACY.md).
@@ -81,11 +83,19 @@ Your API key is stored only on your device — see the [Privacy Policy](./PRIVAC
 2. Click the toolbar icon → **Analyze this page**. The side panel opens with the credibility breakdown.
 3. Use **Re-analyze** to force a fresh run (results are cached until the page content changes).
 
-### Using a local model (no API key, fully offline)
+### Running a model locally (no API key)
 
-Install [Ollama](https://ollama.com), pull a model (e.g. `ollama pull llama3.1`), then in
-Options choose the **Ollama (local)** provider. The default endpoint is
-`http://localhost:11434`.
+Two ways to run without any cloud provider or API key:
+
+**In-browser (WebLLM)** — zero setup beyond picking a model. In Options choose
+**In-browser (WebLLM)** and a model. Requires **WebGPU** (Chrome/Edge/Brave with hardware
+acceleration). The model **downloads once** on the first analysis (~1–5 GB depending on the
+model) and is cached for offline use afterward; a progress indicator shows the download.
+Nothing you analyze ever leaves your device.
+
+**Ollama** — if you already run [Ollama](https://ollama.com): pull a model
+(e.g. `ollama pull llama3.1`), then in Options choose the **Ollama (local)** provider. The
+default endpoint is `http://localhost:11434`.
 
 ### Updating after code changes
 
