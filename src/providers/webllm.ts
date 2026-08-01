@@ -79,7 +79,7 @@ async function getEngine(
 
 export const webllmProvider: LLMProvider = {
   id: 'webllm',
-  label: 'In-browser (WebLLM)',
+  label: 'In-browser / WebLLM (experimental)',
   requiresApiKey: false,
   defaultBaseUrl: '',
   // Prebuilt WebLLM models have a small (~4096-token) context window, so the
@@ -112,13 +112,12 @@ export const webllmProvider: LLMProvider = {
       );
     }
 
-    // Non-streaming create() has no signal param; interrupt on abort instead.
-    const onAbort = () => mlcEngine.interruptGenerate();
-    req.signal?.addEventListener('abort', onAbort, { once: true });
-    req.onProgress?.({ stage: 'generate', text: 'Analyzing with the local model…' });
+    req.onProgress?.({ stage: 'generate', text: 'Generating the analysis…' });
 
     try {
-      const response = await mlcEngine.chat.completions.create({
+      // Stream so the UI shows live progress instead of a frozen spinner during
+      // the slow local generation.
+      const stream = await mlcEngine.chat.completions.create({
         messages: [
           { role: 'system', content: req.system },
           { role: 'user', content: req.user },
@@ -127,22 +126,41 @@ export const webllmProvider: LLMProvider = {
         // Clamp output so prompt + output fits the model's ~4096-token window.
         max_tokens: Math.min(req.settings.maxTokens, 2048),
         response_format: { type: 'json_object' },
+        stream: true,
       });
 
-      const content = response.choices?.[0]?.message?.content;
+      let content = '';
+      let tokens = 0;
+      for await (const chunk of stream) {
+        if (req.signal?.aborted) {
+          await mlcEngine.interruptGenerate();
+          throw new DOMException('Aborted', 'AbortError');
+        }
+        const delta = chunk.choices?.[0]?.delta?.content ?? '';
+        if (delta) {
+          content += delta;
+          tokens += 1;
+          if (tokens % 8 === 0) {
+            req.onProgress?.({
+              stage: 'generate',
+              text: `Generating the analysis… (${tokens} tokens)`,
+            });
+          }
+        }
+      }
+
       if (!content) {
         throw new ProviderError('The model returned an empty response.', { provider: this.id });
       }
       return content;
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') throw error;
       if (req.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
       if (error instanceof ProviderError) throw error;
       throw new ProviderError(`The in-browser model failed: ${describeError(error)}`, {
         provider: this.id,
         cause: error,
       });
-    } finally {
-      req.signal?.removeEventListener('abort', onAbort);
     }
   },
 

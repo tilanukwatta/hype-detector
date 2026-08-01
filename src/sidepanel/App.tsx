@@ -20,6 +20,17 @@ export function App() {
   useApplyTheme(settings.theme, settings.highContrast);
 
   const [state, setState] = useState<State>({ phase: 'idle' });
+  const [elapsed, setElapsed] = useState(0);
+
+  // A ticking elapsed counter during analysis, so a slow local model (WebLLM)
+  // never looks frozen even while it loads and emits no progress.
+  useEffect(() => {
+    if (state.phase !== 'analyzing') return;
+    setElapsed(0);
+    const started = Date.now();
+    const id = setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [state.phase]);
 
   const run = useCallback(async (currentSettings: Settings, force: boolean) => {
     const provider = getProvider(currentSettings.provider);
@@ -120,6 +131,7 @@ export function App() {
       {state.phase === 'analyzing' && (
         <p className="muted">
           {state.progress ?? `Analyzing claims with ${getProvider(settings.provider).label}…`}
+          {` · ${elapsed}s`}
         </p>
       )}
 

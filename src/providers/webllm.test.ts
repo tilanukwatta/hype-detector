@@ -24,6 +24,18 @@ function settingsFor(overrides: Partial<Settings> = {}): Settings {
   return { ...DEFAULT_SETTINGS, provider: 'webllm', apiKey: '', ...overrides };
 }
 
+/** A fake streaming completion: yields the text in a few delta chunks. */
+function streamOf(text: string) {
+  const parts = text
+    ? [text.slice(0, Math.ceil(text.length / 2)), text.slice(Math.ceil(text.length / 2))]
+    : [];
+  return {
+    async *[Symbol.asyncIterator]() {
+      for (const content of parts) yield { choices: [{ delta: { content } }] };
+    },
+  };
+}
+
 function setWebGpu(present: boolean) {
   if (present) {
     Object.defineProperty(globalThis.navigator, 'gpu', { value: {}, configurable: true });
@@ -84,9 +96,7 @@ describe('webllm provider', () => {
 
   it('complete() runs a JSON chat completion with the selected model', async () => {
     setWebGpu(true);
-    engine.chat.completions.create.mockResolvedValue({
-      choices: [{ message: { content: '{"credibility_score":70}' } }],
-    });
+    engine.chat.completions.create.mockResolvedValue(streamOf('{"credibility_score":70}'));
     const onProgress = vi.fn();
 
     const out = await webllmProvider.complete({
@@ -101,11 +111,13 @@ describe('webllm provider', () => {
     expect(createArgs[1]).toBe('Llama-3.2-3B-Instruct-q4f16_1-MLC'); // model id
     const body = (engine.chat.completions.create.mock.calls[0] as unknown[])[0] as {
       response_format: unknown;
+      stream: boolean;
       messages: Array<{ role: string; content: string }>;
     };
     expect(body.response_format).toEqual({ type: 'json_object' });
+    expect(body.stream).toBe(true);
     expect(body.messages[0]).toEqual({ role: 'system', content: 'sys' });
-    expect(out).toBe('{"credibility_score":70}');
+    expect(out).toBe('{"credibility_score":70}'); // reassembled from stream chunks
     expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({ stage: 'generate' }));
   });
 
@@ -120,7 +132,7 @@ describe('webllm provider', () => {
 
   it('complete() throws on empty output', async () => {
     setWebGpu(true);
-    engine.chat.completions.create.mockResolvedValue({ choices: [{ message: { content: '' } }] });
+    engine.chat.completions.create.mockResolvedValue(streamOf(''));
     await expect(
       webllmProvider.complete({ system: 's', user: 'u', settings: settingsFor() })
     ).rejects.toThrow(/empty response/);

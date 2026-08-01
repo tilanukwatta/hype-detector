@@ -83,11 +83,13 @@ export function App() {
 
         {provider.id === 'webllm' && (
           <div className="card" role="note" style={{ fontSize: '13px' }}>
-            Runs a model <strong>entirely in your browser</strong> — no API key, and nothing you
-            analyze leaves your device. Requires <strong>WebGPU</strong> (Chrome/Edge/Brave with
-            hardware acceleration). The chosen model <strong>downloads once</strong> on the first
-            analysis (roughly 1–5 GB depending on the model) and is cached for offline use after
-            that. Smaller models are faster but less accurate.
+            <strong>Experimental.</strong> Runs a model <strong>entirely in your browser</strong> —
+            no API key, and nothing you analyze leaves your device. Requires <strong>WebGPU</strong>{' '}
+            (Chrome/Edge/Brave with hardware acceleration). The model{' '}
+            <strong>downloads once</strong> on the first analysis (roughly 1–5 GB) and is cached for
+            offline use afterward. <strong>Expect it to be slow</strong> — analysis can take tens of
+            seconds to a few minutes depending on the model and your GPU. Smaller models are faster
+            but less accurate. For fast results, use a cloud provider instead.
           </div>
         )}
 
