@@ -13,7 +13,9 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
 const OUT_DIR = join(ROOT, 'web-ext-artifacts');
 const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8'));
-const OUT_FILE = join(OUT_DIR, `hype-detector-v${pkg.version}.zip`);
+// Distinguish the Chrome Web Store build (no WebLLM) from the full build.
+const suffix = process.env.VITE_STORE_BUILD === '1' ? '-store' : '';
+const OUT_FILE = join(OUT_DIR, `hype-detector-v${pkg.version}${suffix}.zip`);
 
 // CRC-32 (IEEE) with a precomputed table.
 const CRC_TABLE = (() => {

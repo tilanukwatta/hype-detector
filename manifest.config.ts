@@ -2,6 +2,21 @@ import { defineManifest } from '@crxjs/vite-plugin';
 import pkg from './package.json' with { type: 'json' };
 
 /**
+ * The Chrome Web Store build excludes the WebLLM provider (Manifest V3 forbids
+ * the remotely hosted WASM it downloads). In that build we also drop the model
+ * download hosts and the `wasm-unsafe-eval` CSP, so the package uses no remote
+ * code. Build it with `VITE_STORE_BUILD=1`.
+ */
+const storeBuild = process.env.VITE_STORE_BUILD === '1';
+
+const webllmHosts = [
+  'https://huggingface.co/*',
+  'https://*.huggingface.co/*',
+  'https://*.hf.co/*',
+  'https://raw.githubusercontent.com/*',
+];
+
+/**
  * Manifest V3 definition for Hype Detector.
  *
  * Design notes:
@@ -70,14 +85,16 @@ export default defineManifest({
     'http://127.0.0.1/*',
     // WebLLM model downloads (one-time, then cached): weights from HuggingFace,
     // wasm libraries from GitHub. No inference data is sent to these hosts.
-    'https://huggingface.co/*',
-    'https://*.huggingface.co/*',
-    'https://*.hf.co/*',
-    'https://raw.githubusercontent.com/*',
+    // Omitted from the store build (no WebLLM there).
+    ...(storeBuild ? [] : webllmHosts),
   ],
-  // WebLLM runs WebAssembly in the extension pages (side panel/options), which
-  // requires 'wasm-unsafe-eval'.
-  content_security_policy: {
-    extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
-  },
+  // WebLLM runs WebAssembly in the extension pages, which needs
+  // 'wasm-unsafe-eval'. The store build has no WebLLM, so it uses the default CSP.
+  ...(storeBuild
+    ? {}
+    : {
+        content_security_policy: {
+          extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+        },
+      }),
 });

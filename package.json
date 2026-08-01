@@ -10,6 +10,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "zip": "npm run build && node scripts/package.mjs",
+    "build:store": "VITE_STORE_BUILD=1 npm run build",
+    "zip:store": "VITE_STORE_BUILD=1 npm run zip",
     "icons": "node scripts/generate-icons.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
