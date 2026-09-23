@@ -7,6 +7,7 @@ import { hashExtracted } from '@/utils/cache';
 import { getActiveTab, requestPage } from '@/utils/messaging';
 import { getCachedAnalysis, putCachedAnalysis } from '@/utils/storage';
 import { AnalysisView } from '@/ui/AnalysisView';
+import { ChatBox } from '@/ui/ChatBox';
 import { useApplyTheme, useSettings } from '@/ui/hooks';
 
 type State =
@@ -204,6 +205,12 @@ export function App() {
             analysis={state.analysis}
             product={state.extracted.kind === 'product' ? state.extracted.product : undefined}
             page={state.extracted.kind === 'page' ? state.extracted.page : undefined}
+          />
+          <ChatBox
+            key={hashExtracted(state.extracted)}
+            extracted={state.extracted}
+            analysis={state.analysis}
+            settings={settings}
           />
         </>
       )}

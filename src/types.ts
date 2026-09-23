@@ -224,6 +224,16 @@ export type AnalysisResult =
   | { ok: false; error: string; analysis: Analysis; raw: string };
 
 // ---------------------------------------------------------------------------
+// Follow-up chat
+// ---------------------------------------------------------------------------
+
+/** One turn in a follow-up conversation about the analysed page. */
+export interface ChatTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+// ---------------------------------------------------------------------------
 // Cache
 // ---------------------------------------------------------------------------
 
