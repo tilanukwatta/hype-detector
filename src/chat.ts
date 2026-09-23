@@ -40,6 +40,8 @@ export async function askFollowUp(
       user: buildChatPrompt(extracted, analysis, history, trimmed, {
         compact: provider.smallContext,
       }),
+      // Chat answers are free-form prose, not the analysis JSON.
+      json: false,
       settings,
       signal,
       onProgress,

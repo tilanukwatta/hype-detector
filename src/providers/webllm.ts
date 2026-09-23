@@ -201,7 +201,8 @@ export const webllmProvider: LLMProvider = {
         temperature: req.settings.temperature,
         // Clamp output so prompt + output fits the model's ~4096-token window.
         max_tokens: Math.min(req.settings.maxTokens, 2048),
-        response_format: { type: 'json_object' },
+        // Strict JSON for analysis; omitted for free-form chat.
+        ...(req.json === false ? {} : { response_format: { type: 'json_object' as const } }),
         stream: true,
       });
 

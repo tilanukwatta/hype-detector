@@ -101,6 +101,28 @@ describe('askFollowUp', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('does not request JSON output on an OpenAI-compatible provider', async () => {
+    // Regression: JSON mode both forces JSON output and requires the word "json"
+    // in the messages, which broke free-form chat with a 400.
+    let sentBody: Record<string, unknown> = {};
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: { body: string }) => {
+        sentBody = JSON.parse(init.body) as Record<string, unknown>;
+        return new Response(
+          JSON.stringify({ choices: [{ message: { content: 'A plain prose answer.' } }] })
+        );
+      })
+    );
+    const result = await askFollowUp(extracted, analysis, [], 'q?', {
+      ...DEFAULT_SETTINGS,
+      provider: 'openai',
+      apiKey: 'k',
+    });
+    expect(result).toEqual({ ok: true, answer: 'A plain prose answer.' });
+    expect(sentBody.response_format).toBeUndefined();
+  });
+
   it('converts provider errors into an ok:false result', async () => {
     vi.stubGlobal(
       'fetch',

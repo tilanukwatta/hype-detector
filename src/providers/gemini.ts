@@ -32,7 +32,8 @@ export const geminiProvider: LLMProvider = {
         generationConfig: {
           temperature: settings.temperature,
           maxOutputTokens: settings.maxTokens,
-          responseMimeType: 'application/json',
+          // JSON mode for structured analysis; omitted for free-form chat.
+          ...(req.json === false ? {} : { responseMimeType: 'application/json' }),
         },
       },
       { provider: this.id, signal: req.signal }

@@ -31,7 +31,8 @@ export const ollamaProvider: LLMProvider = {
       {
         model: settings.model,
         stream: false,
-        format: 'json',
+        // Strict JSON for analysis; omitted for free-form chat.
+        ...(req.json === false ? {} : { format: 'json' }),
         options: {
           temperature: settings.temperature,
           num_predict: settings.maxTokens,

@@ -15,6 +15,12 @@ export interface CompletionRequest {
   system: string;
   user: string;
   settings: Settings;
+  /**
+   * Request strict-JSON output from providers that support a JSON response mode
+   * (used for structured analysis). Defaults to true. Set false for free-form
+   * prose (e.g. follow-up chat), which must not force a JSON response format.
+   */
+  json?: boolean;
   /** Optional abort signal so the UI can cancel in-flight requests. */
   signal?: AbortSignal;
   /**

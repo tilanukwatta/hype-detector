@@ -31,8 +31,10 @@ export async function chatCompletion(
         { role: 'system', content: req.system },
         { role: 'user', content: req.user },
       ],
-      // Nudges compatible models to emit strict JSON when supported; harmless otherwise.
-      response_format: { type: 'json_object' },
+      // Nudges compatible models to emit strict JSON when supported; harmless
+      // otherwise. Omitted for free-form requests (e.g. chat) — the JSON mode
+      // both forces JSON output and requires the word "json" in the messages.
+      ...(req.json === false ? {} : { response_format: { type: 'json_object' } }),
     },
     {
       provider: provider.id,
