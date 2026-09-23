@@ -22,10 +22,12 @@ const webllmHosts = [
  * Design notes:
  * - `sidePanel` hosts the full analysis UI; the toolbar `action` opens a popup
  *   with a quick "Analyze" trigger.
- * - Reading the current page uses `activeTab` + `scripting`: the extractor is
- *   injected on demand when the user invokes the extension, so no site is listed
- *   in `host_permissions` and there is no broad "read all your data" grant.
- *   Amazon additionally has a declarative content script for auto-injection.
+ * - Reading the current page uses `activeTab` + `scripting`: the page reader
+ *   (`content-inject.js`, built separately as a self-contained IIFE) is injected
+ *   on demand when the user invokes the extension, so no site is listed in
+ *   `host_permissions` and there is no broad "read all your data" grant. The
+ *   reader is a `web_accessible_resource` for `<all_urls>` so it can be injected
+ *   anywhere; that alone grants no host access.
  * - `host_permissions` only lists the LLM provider endpoints the extension may
  *   call.
  * - No analytics, tracking, or remote logging hosts. No backend of our own.
@@ -58,17 +60,14 @@ export default defineManifest({
     service_worker: 'src/background/service-worker.ts',
     type: 'module',
   },
-  content_scripts: [
+  // The page reader is injected on demand (via activeTab) on any site the user
+  // clicks Analyze on, so it must be web-accessible everywhere. `content-inject.js`
+  // is produced by the separate vite.content.config.ts build. Being web-accessible
+  // grants no host access on its own — execution is gated by activeTab.
+  web_accessible_resources: [
     {
-      matches: [
-        'https://www.amazon.com/*',
-        'https://www.amazon.co.uk/*',
-        'https://www.amazon.ca/*',
-        'https://www.amazon.de/*',
-        'https://www.amazon.com.au/*',
-      ],
-      js: ['src/content/content-script.ts'],
-      run_at: 'document_idle',
+      resources: ['content-inject.js'],
+      matches: ['<all_urls>'],
     },
   ],
   permissions: ['storage', 'activeTab', 'sidePanel', 'scripting'],

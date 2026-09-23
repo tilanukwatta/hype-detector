@@ -12,6 +12,13 @@ export type MessageResponse = {
   GET_PAGE: PageExtractionOutcome;
 };
 
+/**
+ * The on-demand page reader, built as a self-contained IIFE by
+ * vite.content.config.ts and exposed via web_accessible_resources. Injected with
+ * `chrome.scripting.executeScript` using the active tab's `activeTab` grant.
+ */
+export const CONTENT_SCRIPT_FILE = 'content-inject.js';
+
 /** The active tab in the current window, or null if none is addressable. */
 export async function getActiveTab(): Promise<chrome.tabs.Tab | null> {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -51,15 +58,12 @@ async function requestExtraction<T extends ExtensionMessage['type']>(
   const first = await sendToTab(tabId, { type } as ExtensionMessage);
   if (first) return first as MessageResponse[T];
 
-  const files = chrome.runtime.getManifest().content_scripts?.[0]?.js ?? [];
-  if (files.length === 0) {
-    return noReader('The page reader is missing from this build.') as MessageResponse[T];
-  }
-
-  // Inject on demand, then retry. Surface the real error so failures are
-  // diagnosable rather than a silent "nothing happened".
+  // The reader is not present (e.g. a fresh tab, or one predating the extension
+  // load). Inject the self-contained IIFE, then retry. The IIFE registers its
+  // listener synchronously, so it is ready by the time executeScript resolves.
+  // Surface the real error so failures are diagnosable.
   try {
-    await chrome.scripting.executeScript({ target: { tabId }, files });
+    await chrome.scripting.executeScript({ target: { tabId }, files: [CONTENT_SCRIPT_FILE] });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     return noReader(`Could not load the page reader — ${detail}`) as MessageResponse[T];

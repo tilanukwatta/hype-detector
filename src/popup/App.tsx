@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { getProvider } from '@/providers';
-import { getActiveTab } from '@/utils/messaging';
+import { getActiveTab, CONTENT_SCRIPT_FILE } from '@/utils/messaging';
 import { useApplyTheme, useSettings } from '@/ui/hooks';
 
 /**
@@ -33,10 +33,9 @@ export function App() {
       // does not auto-inject content scripts into those). The content script is
       // idempotent, so this is safe even if it is already present. Best-effort:
       // if it fails, the side panel falls back to injecting it itself.
-      const files = chrome.runtime.getManifest().content_scripts?.[0]?.js ?? [];
-      if (files.length > 0) {
-        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files }).catch(() => {});
-      }
+      await chrome.scripting
+        .executeScript({ target: { tabId: tab.id }, files: [CONTENT_SCRIPT_FILE] })
+        .catch(() => {});
 
       await opening;
       window.close();

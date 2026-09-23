@@ -17,9 +17,6 @@ function makeSendMessage(steps: Array<{ lastError?: { message: string }; respons
 }
 
 beforeEach(() => {
-  (chrome.runtime as unknown as { getManifest: () => unknown }).getManifest = () => ({
-    content_scripts: [{ js: ['content.js'] }],
-  });
   chrome.scripting.executeScript = vi.fn(async () => []) as never;
 });
 
@@ -44,7 +41,7 @@ describe('requestProduct', () => {
 
     expect(chrome.scripting.executeScript).toHaveBeenCalledWith({
       target: { tabId: 7 },
-      files: ['content.js'],
+      files: ['content-inject.js'],
     });
     expect(out).toMatchObject({ ok: false, reason: 'not-product-page' });
   });
@@ -100,7 +97,7 @@ describe('requestPage', () => {
 
     expect(chrome.scripting.executeScript).toHaveBeenCalledWith({
       target: { tabId: 9 },
-      files: ['content.js'],
+      files: ['content-inject.js'],
     });
     expect(out).toMatchObject({ ok: false, reason: 'thin-content' });
   });
