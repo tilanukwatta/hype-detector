@@ -1,4 +1,13 @@
-import type { Product } from '@/types';
+import type { Product, PageContent } from '@/types';
+import type { Extracted } from '@/extraction';
+
+/**
+ * Bump when the prompt or analysis schema changes in a way that makes older
+ * cached analyses render incorrectly. It is part of the cache key, so a bump
+ * transparently invalidates every prior entry (e.g. product-shaped results that
+ * predate the generic schema) without a manual cache wipe.
+ */
+export const ANALYSIS_VERSION = 2;
 
 /**
  * Deterministic hash of a product's meaningful content. Used to decide whether a
@@ -21,6 +30,33 @@ export function hashProduct(product: Product): string {
     reviews: product.reviews.map((r) => r.body),
   };
   return fnv1a(JSON.stringify(normalised));
+}
+
+/**
+ * Deterministic hash of a generic page's meaningful content. Includes the URL
+ * path (so the same boilerplate on different pages does not collide) plus the
+ * title, headings, and section text.
+ */
+export function hashPage(page: PageContent): string {
+  let url = page.url;
+  try {
+    const u = new URL(page.url);
+    url = `${u.host}${u.pathname}`;
+  } catch {
+    // Non-parseable URL — hash it as-is.
+  }
+  const normalised = {
+    url,
+    title: page.title,
+    headings: page.headings,
+    sections: page.sections.map((s) => `${s.heading ?? ''}::${s.text}`),
+  };
+  return fnv1a(JSON.stringify(normalised));
+}
+
+/** Hash whichever kind of extracted content we have. */
+export function hashExtracted(extracted: Extracted): string {
+  return extracted.kind === 'product' ? hashProduct(extracted.product) : hashPage(extracted.page);
 }
 
 /** FNV-1a 32-bit hash, returned as an 8-char hex string. Small and dependency-free. */

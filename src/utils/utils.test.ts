@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { Product } from '@/types';
 import { DEFAULT_SETTINGS } from '@/types';
 import { AnalysisSchema } from '@/types';
-import { hashProduct } from './cache';
+import { hashProduct, ANALYSIS_VERSION } from './cache';
 import { loadSettings, saveSettings, getCachedAnalysis, putCachedAnalysis } from './storage';
 
 const baseProduct: Product = {
@@ -60,7 +60,7 @@ describe('analysis cache', () => {
 
   it('stores and retrieves by hash/provider/model', async () => {
     await putCachedAnalysis({
-      productHash: 'abc',
+      contentHash: 'abc',
       provider: 'anthropic',
       model: 'claude-sonnet-5',
       analysis: analysis as never,
@@ -68,12 +68,12 @@ describe('analysis cache', () => {
     });
     const hit = await getCachedAnalysis('abc', 'anthropic', 'claude-sonnet-5');
     expect(hit).not.toBeNull();
-    expect(hit?.productHash).toBe('abc');
+    expect(hit?.contentHash).toBe('abc');
   });
 
   it('misses on a different model', async () => {
     await putCachedAnalysis({
-      productHash: 'abc',
+      contentHash: 'abc',
       provider: 'anthropic',
       model: 'claude-sonnet-5',
       analysis: analysis as never,
@@ -83,11 +83,11 @@ describe('analysis cache', () => {
   });
 
   it('normalizes a stale entry missing newer fields (e.g. review_summary)', async () => {
-    // Simulate an entry written before review_summary existed.
+    // An entry at the current schema version but missing a field added later.
     await chrome.storage.local.set({
       analysisCache: {
-        'h:anthropic:m': {
-          productHash: 'h',
+        [`h:anthropic:m:v${ANALYSIS_VERSION}`]: {
+          contentHash: 'h',
           provider: 'anthropic',
           model: 'm',
           analysis: { credibility_score: 80, summary: 'old result' },
@@ -100,5 +100,21 @@ describe('analysis cache', () => {
     expect(hit?.analysis.credibility_score).toBe(80);
     // Missing field is filled with a safe default instead of being undefined.
     expect(hit?.analysis.review_summary.product_pros).toEqual([]);
+  });
+
+  it('invalidates entries written under an older schema version', async () => {
+    // A legacy, unversioned cache key must not be served under the new schema.
+    await chrome.storage.local.set({
+      analysisCache: {
+        'h:anthropic:m': {
+          contentHash: 'h',
+          provider: 'anthropic',
+          model: 'm',
+          analysis: { credibility_score: 80 },
+          createdAt: 1,
+        },
+      },
+    });
+    expect(await getCachedAnalysis('h', 'anthropic', 'm')).toBeNull();
   });
 });

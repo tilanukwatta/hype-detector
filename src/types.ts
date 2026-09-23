@@ -128,6 +128,35 @@ export const ClaimSchema = z.object({
 export type Claim = z.infer<typeof ClaimSchema>;
 
 /**
+ * How a claim holds up against the evidence *on the page itself*. This is a
+ * content assessment, never an external fact-check — `unsupported` means the
+ * page offers no evidence, not that the claim is false; `contradicted` means the
+ * page contradicts itself. External verification is deliberately out of scope.
+ */
+export const AssessmentSchema = z.enum([
+  'supported',
+  'unsupported',
+  'contradicted',
+  'uncertain',
+  'opinion',
+]);
+export type Assessment = z.infer<typeof AssessmentSchema>;
+
+export const ConfidenceSchema = z.enum(['low', 'medium', 'high']);
+export type Confidence = z.infer<typeof ConfidenceSchema>;
+
+/** A claim evaluated against on-page evidence (generic webpage analysis). */
+export const EvaluatedClaimSchema = z.object({
+  claim: z.string(),
+  assessment: AssessmentSchema.default('uncertain'),
+  reasoning: z.string().default(''),
+  /** Short quote or paraphrase of the supporting/contradicting text on the page. */
+  evidence_on_page: z.string().default(''),
+  confidence: ConfidenceSchema.default('low'),
+});
+export type EvaluatedClaim = z.infer<typeof EvaluatedClaimSchema>;
+
+/**
  * Summary of what customer reviews say, split into product vs seller pros/cons.
  * Derived only from the reviews provided; all fields empty when there are none.
  */
@@ -140,11 +169,34 @@ export const ReviewSummarySchema = z.object({
 });
 export type ReviewSummary = z.infer<typeof ReviewSummarySchema>;
 
+/**
+ * Superset analysis schema. It serves both product listings and generic pages:
+ * shopping-site analysis populates the product-oriented fields (`marketing_hype`,
+ * `review_summary`, …) while generic-page analysis populates the credibility
+ * fields (`key_claims`, `evidence_quality`, …). Every field is default-safe so a
+ * model may omit the fields that do not apply, and so cached entries written by
+ * an older version still validate on read.
+ */
 export const AnalysisSchema = z.object({
   overall_assessment: z.string().default(''),
   /** 0–100. Mapped to a 1–5 star scale in the UI. */
   credibility_score: z.number().min(0).max(100).default(50),
+  /** Coarse page/content type, e.g. 'product' | 'article' | 'blog' | 'other'. */
+  content_type: z.string().default(''),
   marketing_hype: HypeLevelSchema.default('Medium'),
+
+  // Generic credibility assessment (populated for any page).
+  key_claims: z.array(EvaluatedClaimSchema).default([]),
+  supported_claims: z.array(EvaluatedClaimSchema).default([]),
+  questionable_claims: z.array(EvaluatedClaimSchema).default([]),
+  evidence_quality: z.array(z.string()).default([]),
+  source_transparency: z.array(z.string()).default([]),
+  persuasive_techniques: z.array(z.string()).default([]),
+  missing_context: z.array(z.string()).default([]),
+  /** What the model could NOT assess from the page alone (verification limits). */
+  limitations: z.array(z.string()).default([]),
+
+  // Product-oriented fields (populated for shopping listings).
   unsupported_claims: z.array(ClaimSchema).default([]),
   scientific_claims: z.array(ClaimSchema).default([]),
   missing_evidence: z.array(z.string()).default([]),
@@ -176,7 +228,8 @@ export type AnalysisResult =
 // ---------------------------------------------------------------------------
 
 export interface CachedAnalysis {
-  productHash: string;
+  /** Hash of the extracted content (product or generic page). */
+  contentHash: string;
   provider: ProviderId;
   model: string;
   analysis: Analysis;
