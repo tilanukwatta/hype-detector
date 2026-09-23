@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { requestProduct } from './messaging';
+import { requestProduct, requestPage } from './messaging';
 
 /**
  * Drive `chrome.tabs.sendMessage`'s callback deterministically. Each entry is
@@ -71,5 +71,47 @@ describe('requestProduct', () => {
     const out = await requestProduct(1);
     expect(out).toMatchObject({ ok: false, reason: 'no-content-script' });
     if (!out.ok) expect(out.message).toMatch(/did not respond/);
+  });
+});
+
+describe('requestPage', () => {
+  it('sends GET_PAGE and returns generic page content without injecting', async () => {
+    const extracted = { kind: 'page', page: { url: 'https://x/', title: 'X' } };
+    chrome.tabs.sendMessage = makeSendMessage([{ response: { ok: true, extracted } }]) as never;
+
+    const out = await requestPage(2);
+
+    expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(
+      2,
+      { type: 'GET_PAGE' },
+      expect.any(Function)
+    );
+    expect(out).toEqual({ ok: true, extracted });
+    expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
+  });
+
+  it('injects and retries when the reader is missing', async () => {
+    chrome.tabs.sendMessage = makeSendMessage([
+      { lastError: { message: 'Could not establish connection' } },
+      { response: { ok: false, reason: 'thin-content', message: 'too little' } },
+    ]) as never;
+
+    const out = await requestPage(9);
+
+    expect(chrome.scripting.executeScript).toHaveBeenCalledWith({
+      target: { tabId: 9 },
+      files: ['content.js'],
+    });
+    expect(out).toMatchObject({ ok: false, reason: 'thin-content' });
+  });
+
+  it('reports no-content-script when injection fails', async () => {
+    chrome.tabs.sendMessage = makeSendMessage([{ lastError: { message: 'no receiver' } }]) as never;
+    chrome.scripting.executeScript = vi.fn(async () => {
+      throw new Error('Cannot access contents of the page');
+    }) as never;
+
+    const out = await requestPage(1);
+    expect(out).toMatchObject({ ok: false, reason: 'no-content-script' });
   });
 });

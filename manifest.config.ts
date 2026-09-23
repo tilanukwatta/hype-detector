@@ -22,8 +22,12 @@ const webllmHosts = [
  * Design notes:
  * - `sidePanel` hosts the full analysis UI; the toolbar `action` opens a popup
  *   with a quick "Analyze" trigger.
+ * - Reading the current page uses `activeTab` + `scripting`: the extractor is
+ *   injected on demand when the user invokes the extension, so no site is listed
+ *   in `host_permissions` and there is no broad "read all your data" grant.
+ *   Amazon additionally has a declarative content script for auto-injection.
  * - `host_permissions` only lists the LLM provider endpoints the extension may
- *   call. Amazon is covered by the content script `matches` + `activeType`.
+ *   call.
  * - No analytics, tracking, or remote logging hosts. No backend of our own.
  */
 export default defineManifest({
@@ -69,14 +73,8 @@ export default defineManifest({
   ],
   permissions: ['storage', 'activeTab', 'sidePanel', 'scripting'],
   host_permissions: [
-    // Shopping sites — needed so the side panel can inject the extractor on
-    // demand (e.g. into tabs that were already open before the extension loaded).
-    'https://www.amazon.com/*',
-    'https://www.amazon.co.uk/*',
-    'https://www.amazon.ca/*',
-    'https://www.amazon.de/*',
-    'https://www.amazon.com.au/*',
-    // LLM provider endpoints (contacted only when you run an analysis).
+    // LLM provider endpoints (contacted only when you run an analysis). Web
+    // pages themselves are read via `activeTab`, so no page host is listed here.
     'https://api.openai.com/*',
     'https://api.anthropic.com/*',
     'https://generativelanguage.googleapis.com/*',

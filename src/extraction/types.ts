@@ -1,4 +1,12 @@
-import type { Product } from '@/types';
+import type { PageContent, Product } from '@/types';
+
+/**
+ * The two shapes extraction can yield: a structured {@link Product} from a
+ * shopping-site adapter, or generic {@link PageContent} from any other page.
+ * A discriminant `kind` lets downstream code (prompt, analyze, UI) branch
+ * without losing type information.
+ */
+export type Extracted = { kind: 'product'; product: Product } | { kind: 'page'; page: PageContent };
 
 /**
  * A site adapter knows how to recognise a shopping site and pull a structured

@@ -53,6 +53,36 @@ export const ProductSchema = z.object({
 export type Product = z.infer<typeof ProductSchema>;
 
 // ---------------------------------------------------------------------------
+// Generic page (what the generic extractor produces for non-product pages;
+// never raw HTML — bounded, noise-stripped text only)
+// ---------------------------------------------------------------------------
+
+/** One logical section of a page: the text under a heading (or a lead section). */
+export const PageSectionSchema = z.object({
+  /** The heading that introduces this section; absent for lead/untitled content. */
+  heading: z.string().optional(),
+  text: z.string(),
+});
+export type PageSection = z.infer<typeof PageSectionSchema>;
+
+export const PageContentSchema = z.object({
+  url: z.string(),
+  title: z.string(),
+  /** Publisher/site name from OpenGraph or JSON-LD, e.g. "The Verge". */
+  siteName: z.string().optional(),
+  author: z.string().optional(),
+  publishedAt: z.string().optional(),
+  /** Coarse classification: 'article' | 'blog' | 'product' | 'marketing' | 'other'. */
+  contentType: z.string().optional(),
+  headings: z.array(z.string()).default([]),
+  /** Readable body split into meaningful sections (bounded before prompting). */
+  sections: z.array(PageSectionSchema).default([]),
+  /** Extra document metadata (description, lang, og:type, JSON-LD @type, …). */
+  metadata: z.record(z.string(), z.string()).default({}),
+});
+export type PageContent = z.infer<typeof PageContentSchema>;
+
+// ---------------------------------------------------------------------------
 // Settings
 // ---------------------------------------------------------------------------
 
