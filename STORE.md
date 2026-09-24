@@ -26,39 +26,44 @@ likely to reject it.
 
 **Summary** (short description, ≤132 chars):
 
-> Separate evidence from marketing: analyze the claims in a product listing with your own LLM key or a local model.
+> Analyze the credibility of any web page — separate evidence from hype — with your own LLM key or a local model.
 
-**Category:** Shopping (alternative: Productivity)
+**Category:** Productivity (alternative: Shopping)
 
 **Language:** English (United States)
 
 **Detailed description:**
 
 ```
-Hype Detector helps you think critically about online product listings. Instead of telling
-you what to buy, it analyzes the claims the seller makes — flagging vague marketing language,
-unsupported or scientific claims, and missing evidence — and explains its reasoning so you
-can decide for yourself.
+Hype Detector helps you think critically about what you read online. Instead of telling you
+what to believe or buy, it analyzes the claims on a page — flagging vague or loaded language,
+unsupported claims, missing evidence, and persuasive techniques — and explains its reasoning
+so you can decide for yourself. You can also ask follow-up questions about the page.
 
-Its goal is to answer one question: how trustworthy are the claims in this listing?
+Its goal is to answer one question: how well does this page's own content support its claims?
 
+It assesses only what is on the page — it does not verify facts against outside sources, and
+it clearly separates what it evaluated from the page from what it could not verify.
+
+• Works on any page — articles, blogs, marketing pages, and product listings. On shopping
+  sites it also summarizes what reviewers say (pros and cons of the product and seller).
+• Ask follow-up questions — get answers grounded only in the page and the analysis, not the
+  open web.
 • Bring your own LLM — OpenAI, Anthropic, Google Gemini, or OpenRouter with your own API key,
   or a local Ollama server. No subscription, no middleman.
 • Private by design — no accounts, no analytics, no tracking, no telemetry. Your API key is
   stored only on your device, and your data goes directly to the provider you choose (and never
   leaves your device with a local Ollama model).
-• Balanced, evidence-oriented — it distinguishes facts from marketing, highlights missing
-  evidence, summarizes what reviewers say (pros and cons of the product and seller), and never
-  claims a product is "fake" — only whether evidence is present.
+• Careful wording — it distinguishes facts from opinion and rhetoric, and never claims content
+  is "fake" — only whether the page provides evidence for it.
 
 How to use:
 1. Open the Options page and enter an API key (or choose a local model).
-2. Visit an Amazon product page.
+2. Visit any web page.
 3. Click the toolbar icon → Analyze this page.
-4. Read the credibility breakdown in the side panel.
+4. Read the credibility breakdown in the side panel, and ask follow-up questions.
 
-Analysis only runs when you click Analyze — never automatically. Currently supports Amazon;
-more sites planned.
+Analysis only runs when you click Analyze — never automatically, and never in the background.
 
 Open source (MIT): https://github.com/tilanukwatta/hype-detector
 ```
@@ -77,8 +82,9 @@ Open source (MIT): https://github.com/tilanukwatta/hype-detector
 - **Store icon — 128×128 PNG:** use **`src/assets/icon-128.png`** (also in a build at
   `dist/src/assets/icon-128.png`). This is the icon shown on the listing.
 - **Screenshots — required, 1–5, 1280×800** (or 640×400), PNG/JPEG: capture the side panel
-  showing a real analysis (credibility rating, summary, "What reviewers say", claims).
-  Needs a real API key + an Amazon page — the one manual step.
+  showing a real analysis (credibility rating, summary, key claims with their assessments) and
+  the follow-up chat. A news article and an Amazon product page make good, varied examples.
+  Needs a real API key — the one manual step.
 - **Small promo tile — 440×280** (optional but recommended for better placement).
 - **Marquee — 1400×560** (optional).
 
@@ -90,24 +96,25 @@ The console asks you to justify each permission. Suggested text:
 
 - **storage:** Save the user's settings, API key, and cached analysis results locally on the
   device.
-- **activeTab:** Read the current product page only when the user clicks Analyze.
-- **scripting:** Inject the product-data extractor into the current tab on demand to read the
-  listing.
-- **sidePanel:** Display the analysis results in the browser side panel.
-- **Host permission — amazon.\* :** Extract the structured product listing (title, price,
-  bullets, description, specifications, visible reviews) to analyze.
+- **activeTab:** Read the current page's content only when the user clicks Analyze. This is
+  what grants access to the page, on demand, for that one tab.
+- **scripting:** Inject the page-content extractor into the current tab on demand (using the
+  access granted by activeTab) to read the page the user asked to analyze.
+- **sidePanel:** Display the analysis results and follow-up chat in the browser side panel.
 - **Host permissions — api.openai.com, api.anthropic.com, generativelanguage.googleapis.com,
   openrouter.ai:** Send the analysis request to the LLM provider the user selected, using the
   user's own API key.
 - **Host permissions — localhost / 127.0.0.1:** Connect to a user-run local Ollama server.
 
-_(The store build has no WebLLM, so it does **not** request the huggingface.co /
+_(Note: the extension requests **no** website host permissions. Reading the current page is
+done through activeTab + scripting, which only apply after the user clicks Analyze. The store
+build has no WebLLM, so it also does **not** request the huggingface.co /
 raw.githubusercontent.com hosts — don't list them.)_
 
 **Single purpose:**
 
-> Analyze the trustworthiness of the claims in an online product listing, helping the user
-> separate evidence from marketing.
+> Assess how well a web page's own content supports its claims, helping the user separate
+> evidence from hype, and answer the user's follow-up questions about that page.
 
 ---
 
@@ -121,9 +128,12 @@ user's browser directly to the LLM provider the user chose (or nowhere, for loca
 - **Authentication information** — YES. The user's API key. Stored locally; sent only to the
   provider the user selects, to authenticate their own requests. Used only for app
   functionality.
-- **Website content** — YES. Structured product-listing data (and a bounded sample of visible
-  reviews) from the page. Sent to the user's chosen LLM provider to produce the analysis. Used
-  only for app functionality.
+- **Website content** — YES. The readable content of the page the user chooses to analyze:
+  the main article text (title, author/date, headings, body sections) on general pages, or
+  structured product-listing data plus a bounded sample of visible reviews on shopping sites —
+  and the user's follow-up questions. Navigation, ads, forms, hidden elements, and typed/form
+  input are excluded, and raw HTML is never sent. Sent to the user's chosen LLM provider to
+  produce the analysis. Used only for app functionality.
 - All other categories (PII, health, financial, location, web history, personal
   communications, user activity) — NO.
 

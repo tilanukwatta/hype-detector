@@ -1,11 +1,11 @@
 # Privacy Policy — Hype Detector
 
-**Effective date:** 11 July 2026
+**Effective date:** 23 September 2026
 
-Hype Detector is an open-source browser extension that analyzes the claims in a
-product listing using a Large Language Model (LLM) that **you** configure with your own
-API key. This policy explains exactly what the extension does and does not do with your
-data.
+Hype Detector is an open-source browser extension that analyzes the claims and credibility
+of a web page — and answers your follow-up questions about it — using a Large Language
+Model (LLM) that **you** configure with your own API key. This policy explains exactly what
+the extension does and does not do with your data.
 
 **Short version:** Hype Detector has no servers. We do not collect, transmit, store, or
 sell any of your data. Everything runs locally in your browser, except for the analysis
@@ -26,19 +26,33 @@ The extension stores the following using your browser's local extension storage
 - **Your settings**: chosen provider, model, and preferences (theme, etc.).
 - **Your API key**: stored locally so you don't have to re-enter it. It is sent only to
   the provider you selected, when you run an analysis.
-- **Cached analyses**: recent results, kept so re-opening a product doesn't re-run (and
+- **Cached analyses**: recent results, kept so re-opening a page doesn't re-run (and
   re-bill) an identical analysis. You can clear these any time from the Options page.
+  (Follow-up chat answers are **not** cached.)
 
 ## Data sent to your chosen LLM provider
 
-Analysis only happens when you click **Analyze**. It is never automatic. When you do:
+Analysis only happens when you click **Analyze**, on the page you are actively viewing. It
+is never automatic. When you do:
 
-- The extension extracts a **structured summary** of the current product listing (title,
-  brand, price, bullet points, description, specifications, and a bounded, truncated sample
-  of visible customer reviews). It does **not** send raw page HTML.
-- That structured product data, together with your API key, is sent **directly from your
-  browser to the API endpoint of the provider you configured** (for example OpenAI,
-  Anthropic, Google, or OpenRouter).
+- The extension extracts a **structured summary** of the current page's readable content. On
+  a supported shopping site that is the product listing (title, brand, price, bullet points,
+  description, specifications, and a bounded, truncated sample of visible customer reviews);
+  on any other page it is the main article text — title, author/date if present, headings,
+  and the body split into bounded sections, with navigation, ads, forms, hidden elements, and
+  any editable/`contenteditable` regions removed. It does **not** send raw page HTML, and it
+  does **not** read form fields, passwords, or text you have typed.
+- That structured content, together with your API key, is sent **directly from your browser
+  to the API endpoint of the provider you configured** (for example OpenAI, Anthropic,
+  Google, or OpenRouter).
+
+**Follow-up chat.** If you ask a follow-up question about the page, your question — together
+with the same extracted page content and the analysis already produced — is sent to your
+chosen provider the same way. Chat answers are not stored.
+
+**Pages we refuse to read.** The extractor will not run on browser-internal pages
+(`chrome://`, extension pages, `file://`, `view-source:`) or on obvious sensitive hosts such
+as mail, banking, and sign-in pages.
 
 Your use of a third-party provider is governed by **that provider's** privacy policy and
 terms. Please review the policy of whichever provider you choose.
@@ -62,8 +76,10 @@ product data or browsing information. After the download, WebLLM works fully off
 ## Permissions and why they are needed
 
 - **storage** — save your settings, API key, and cached results locally.
-- **activeTab** / **scripting** — read the product details from the page you are viewing,
-  only when you ask for an analysis.
+- **activeTab** / **scripting** — read the content of the page you are viewing, only when you
+  ask for an analysis. The page reader is injected on demand at that moment using the access
+  `activeTab` grants for the current tab; the extension declares **no** standing permission to
+  any website and does not run on pages in the background.
 - **sidePanel** — display results in the browser side panel.
 - **Host permissions** for provider API endpoints (and `localhost` for Ollama) — allow
   the browser to send your analysis request to the provider you selected. These hosts are
