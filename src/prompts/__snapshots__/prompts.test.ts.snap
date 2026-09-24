@@ -8,6 +8,7 @@ For "review_summary", use ONLY the customer reviews provided in the product data
 Return ONLY a single JSON object, with no markdown fences or commentary, matching exactly this schema:
 
 {
+  "content_type": "product",
   "overall_assessment": "one or two sentence neutral summary of how well the listing's claims are supported",
   "credibility_score": 0-100 integer (higher = better supported claims),
   "marketing_hype": "Low" | "Medium" | "High",

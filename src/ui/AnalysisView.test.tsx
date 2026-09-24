@@ -80,6 +80,47 @@ describe('AnalysisView', () => {
     expect(screen.queryByText('What reviewers say')).not.toBeInTheDocument();
   });
 
+  it('renders generic-page sections, assessment badges, and the content disclaimer', () => {
+    render(
+      <AnalysisView
+        analysis={analysis({
+          unsupported_claims: [],
+          missing_evidence: [],
+          good_signs: [],
+          content_type: 'article',
+          key_claims: [
+            {
+              claim: 'Coffee cures everything',
+              assessment: 'unsupported',
+              reasoning: 'No study cited on the page.',
+              evidence_on_page: 'coffee is a miracle',
+              confidence: 'low',
+            },
+          ],
+          persuasive_techniques: ['Appeals to novelty'],
+          limitations: ['Needs independent clinical sources'],
+        })}
+        page={{
+          url: 'https://example.com/coffee',
+          title: 'Coffee and Health',
+          siteName: 'Example Health',
+          headings: [],
+          sections: [],
+          metadata: {},
+        }}
+      />
+    );
+    expect(screen.getByText('Coffee and Health')).toBeInTheDocument();
+    expect(screen.getByText('Key claims')).toBeInTheDocument();
+    expect(screen.getByText('Coffee cures everything')).toBeInTheDocument();
+    expect(screen.getByText('Unsupported')).toBeInTheDocument(); // assessment badge
+    expect(screen.getByText('Persuasive techniques')).toBeInTheDocument();
+    expect(screen.getByText('Could not verify')).toBeInTheDocument();
+    // Generic disclaimer, not the product one.
+    expect(screen.getByText(/automated assessment of the page/i)).toBeInTheDocument();
+    expect(screen.queryByText(/not a verdict on the product/i)).not.toBeInTheDocument();
+  });
+
   it('explains when a page has reviews but none could be read', () => {
     render(
       <AnalysisView

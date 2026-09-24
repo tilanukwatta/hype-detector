@@ -1,14 +1,20 @@
 # Hype Detector
 
-> Separate evidence from marketing.
+> Separate evidence from hype.
 
 **Hype Detector** is an open-source browser extension (Chrome / Edge / Brave, Manifest V3)
-that helps you critically evaluate online product listings using an LLM of your choice.
+that helps you critically evaluate **any web page** using an LLM of your choice.
 
-It does **not** tell you whether to buy something. Instead it analyzes the **claims the
-seller makes** — flagging vague marketing language, unsupported or scientific claims, and
-missing evidence — and explains its reasoning so you can decide for yourself.
+It does **not** tell you what to believe or buy. Instead it analyzes the **claims on the
+page** — flagging vague or loaded language, unsupported claims, missing evidence, and
+persuasive techniques — and explains its reasoning so you can decide for yourself. You can
+also **ask follow-up questions** about the page.
 
+It assesses only what is on the page; it does **not** verify facts against outside sources,
+and it clearly separates what it evaluated from the page from what it could not verify.
+
+- **Works on any page** — articles, blogs, marketing pages, and product listings. On shopping
+  sites it also summarizes what reviewers say (pros/cons of the product and seller).
 - **No backend.** Everything runs in your browser.
 - **Bring your own API key** — OpenAI, Anthropic, Google Gemini, OpenRouter — or run a
   model **locally** with Ollama or fully **in-browser** (WebLLM/WebGPU, no key, no server).
@@ -16,19 +22,25 @@ missing evidence — and explains its reasoning so you can decide for yourself.
 - **Private by design.** No analytics, tracking, telemetry, or remote logging. Your API
   key and browsing stay on your device.
 
-> This is a v0.1 MVP. Currently supports **Amazon** product pages.
-
 ## How it works
 
-1. A content script extracts a structured product object from the page (title, brand,
-   price, bullets, description, specifications) — **never raw HTML, and never reviews**.
+1. When you click Analyze, the page reader is injected on demand and extracts a structured
+   summary of the page — the main article text (title, author/date, headings, body sections)
+   on general pages, or a structured product object (title, brand, price, bullets, specs, and
+   a bounded sample of visible reviews) on supported shopping sites. Navigation, ads, forms,
+   hidden elements, and text you have typed are excluded — **never raw HTML**.
 2. The extension builds a prompt and sends it, with your API key, **directly** to your
    chosen provider.
-3. The response is parsed into a structured assessment and shown in a side panel with a
-   credibility rating and collapsible sections.
+3. The response is parsed into a structured credibility assessment and shown in a side panel:
+   an overall rating, key claims with how well the page supports each, evidence quality,
+   persuasive techniques, and what could not be verified.
+4. Ask **follow-up questions** in the side panel — answered only from the page content and
+   the analysis, not the open web.
 
 The extension only analyzes when you click **Analyze** — it never runs automatically on
-every page, and results are cached locally until the page content changes.
+every page. It will not read browser-internal pages or obvious sensitive hosts (mail,
+banking, sign-in). Analyses are cached locally until the page content changes; follow-up
+chat answers are not cached.
 
 ## Install
 
@@ -77,11 +89,12 @@ The extension card should show no errors. (If it ever does, click **Clear all**,
 
 Your API key is stored only on your device — see the [Privacy Policy](./PRIVACY.md).
 
-### Analyze a product
+### Analyze a page
 
-1. Open an **Amazon product page** (a product detail page, e.g. `amazon.com/dp/...`).
+1. Open any web page — a news article, blog post, marketing page, or an Amazon product page.
 2. Click the toolbar icon → **Analyze this page**. The side panel opens with the credibility breakdown.
-3. Use **Re-analyze** to force a fresh run (results are cached until the page content changes).
+3. Ask a **follow-up question** in the box at the bottom of the panel to dig into anything.
+4. Use **Re-analyze** to force a fresh run (results are cached until the page content changes).
 
 ### Running a model locally (no API key)
 
@@ -110,9 +123,10 @@ card. For active development with hot reload, use `npm run dev` instead.
 
 ### Troubleshooting
 
-- **"Could not read this page" / no result** — make sure you're on a supported product page.
-  If the tab was already open when you loaded or updated the extension, **reload the page**
-  and try again.
+- **"Not enough readable content" / no result** — some pages (app shells, login walls, or
+  pages that render their text late) expose little readable content; try scrolling to load
+  the article, then **Re-analyze**. If the tab was already open when you loaded or updated the
+  extension, **reload the page** and try again.
 - **Authentication or model errors** — use **Test connection** in Options. It distinguishes an
   invalid key from a valid key that lacks access to the selected model; switch the model or
   provider if needed.
@@ -136,19 +150,24 @@ card. For active development with hot reload, use `npm run dev` instead.
 ```
 src/
   background/    thin service worker (side-panel wiring)
-  content/       extracts a structured product from the page DOM
+  content/       page reader: responds to extraction requests from the DOM
   popup/         toolbar popup: quick "Analyze" launcher
-  sidepanel/     full, collapsible analysis UI
+  sidepanel/     full, collapsible analysis UI + follow-up chat
   options/       settings (provider, key, model, theme…)
   providers/     one file per LLM provider behind a shared interface
-  extraction/    per-site adapters (amazon.ts, walmart stub) + registry
-  prompts/       system prompt + prompt builder
+  extraction/    generic readability extractor + per-site adapters
+                 (amazon.ts, walmart) + registry (Extracted = product | page)
+  prompts/       system prompts + analysis and chat prompt builders
   parser/        tolerant JSON extraction + schema validation
-  ui/            shared React components + theming
+  analyze.ts     analysis orchestration; chat.ts  follow-up chat orchestration
+  ui/            shared React components (incl. ChatBox) + theming
   utils/         storage, messaging, caching
 ```
 
-Adding a new provider or shopping site is a self-contained change — see
+The page reader is bundled separately as a self-contained IIFE
+(`vite.content.config.ts` → `content-inject.js`) and injected on demand via
+`activeTab`, so the extension declares no standing website permissions. Adding a
+new provider or shopping-site adapter is a self-contained change — see
 [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Privacy

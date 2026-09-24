@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Analysis, AnalysisResult, Product, Settings } from '@/types';
-import { analyzeProduct } from '@/analyze';
+import type { Analysis, AnalysisResult, Settings } from '@/types';
+import type { Extracted } from '@/extraction';
+import { analyzePage } from '@/analyze';
 import { getProvider } from '@/providers';
-import { hashProduct } from '@/utils/cache';
-import { getActiveTab, requestProduct } from '@/utils/messaging';
+import { hashExtracted } from '@/utils/cache';
+import { getActiveTab, requestPage } from '@/utils/messaging';
 import { getCachedAnalysis, putCachedAnalysis } from '@/utils/storage';
 import { AnalysisView } from '@/ui/AnalysisView';
+import { ChatBox } from '@/ui/ChatBox';
 import { useApplyTheme, useSettings } from '@/ui/hooks';
 
 type State =
   | { phase: 'idle' }
   | { phase: 'extracting' }
-  | { phase: 'analyzing'; product: Product; progress?: string }
-  | { phase: 'done'; product: Product; analysis: Analysis; cached: boolean }
+  | { phase: 'analyzing'; extracted: Extracted; progress?: string }
+  | { phase: 'done'; extracted: Extracted; analysis: Analysis; cached: boolean }
   | { phase: 'notice'; message: string; tone: 'info' | 'error' };
 
 export function App() {
@@ -61,7 +63,7 @@ export function App() {
       return;
     }
 
-    const outcome = await requestProduct(tab.id);
+    const outcome = await requestPage(tab.id);
     if (!outcome.ok) {
       const hint =
         outcome.reason === 'no-content-script' ? ' Try reloading the page, then Re-analyze.' : '';
@@ -73,26 +75,26 @@ export function App() {
       return;
     }
 
-    const { product } = outcome;
-    const hash = hashProduct(product);
+    const { extracted } = outcome;
+    const hash = hashExtracted(extracted);
 
     if (!force) {
       const cached = await getCachedAnalysis(hash, currentSettings.provider, currentSettings.model);
       if (cached) {
-        setState({ phase: 'done', product, analysis: cached.analysis, cached: true });
+        setState({ phase: 'done', extracted, analysis: cached.analysis, cached: true });
         return;
       }
     }
 
-    setState({ phase: 'analyzing', product });
+    setState({ phase: 'analyzing', extracted });
     const controller = new AbortController();
     abortRef.current = controller;
 
     let result: AnalysisResult;
     try {
-      result = await analyzeProduct(product, currentSettings, controller.signal, (update) => {
+      result = await analyzePage(extracted, currentSettings, controller.signal, (update) => {
         const label = update.percent != null ? `${update.text} (${update.percent}%)` : update.text;
-        setState({ phase: 'analyzing', product, progress: label });
+        setState({ phase: 'analyzing', extracted, progress: label });
       });
     } catch (error) {
       // Aborted via Stop — the UI is already set by stop(); just bail out.
@@ -114,13 +116,13 @@ export function App() {
     }
 
     await putCachedAnalysis({
-      productHash: hash,
+      contentHash: hash,
       provider: currentSettings.provider,
       model: currentSettings.model,
       analysis: result.analysis,
       createdAt: Date.now(),
     });
-    setState({ phase: 'done', product, analysis: result.analysis, cached: false });
+    setState({ phase: 'done', extracted, analysis: result.analysis, cached: false });
   }, []);
 
   // Auto-run once settings have loaded.
@@ -156,7 +158,7 @@ export function App() {
         </button>
       </header>
 
-      {state.phase === 'extracting' && <p className="muted">Reading the product page…</p>}
+      {state.phase === 'extracting' && <p className="muted">Reading the page…</p>}
       {state.phase === 'analyzing' && (
         <div style={{ display: 'grid', gap: '8px' }}>
           <p className="muted" style={{ margin: 0 }}>
@@ -199,7 +201,17 @@ export function App() {
               Showing a cached result. Use Re-analyze to run again.
             </div>
           )}
-          <AnalysisView analysis={state.analysis} product={state.product} />
+          <AnalysisView
+            analysis={state.analysis}
+            product={state.extracted.kind === 'product' ? state.extracted.product : undefined}
+            page={state.extracted.kind === 'page' ? state.extracted.page : undefined}
+          />
+          <ChatBox
+            key={hashExtracted(state.extracted)}
+            extracted={state.extracted}
+            analysis={state.analysis}
+            settings={settings}
+          />
         </>
       )}
     </main>

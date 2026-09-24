@@ -6,6 +6,7 @@ import {
   type ProviderId,
   type Settings,
 } from '@/types';
+import { ANALYSIS_VERSION } from '@/utils/cache';
 
 /**
  * Thin, typed wrappers over `chrome.storage.local`. All persistent state lives
@@ -45,11 +46,12 @@ export function onSettingsChanged(callback: (settings: Settings) => void): () =>
 }
 
 // ---------------------------------------------------------------------------
-// Analysis cache (keyed by product hash + provider + model)
+// Analysis cache (keyed by content hash + provider + model + schema version)
 // ---------------------------------------------------------------------------
 
 function cacheKey(hash: string, provider: ProviderId, model: string): string {
-  return `${hash}:${provider}:${model}`;
+  // ANALYSIS_VERSION invalidates entries written under an older prompt/schema.
+  return `${hash}:${provider}:${model}:v${ANALYSIS_VERSION}`;
 }
 
 async function readCache(): Promise<Record<string, CachedAnalysis>> {
@@ -83,7 +85,7 @@ export async function getCachedAnalysis(
 
 export async function putCachedAnalysis(entry: CachedAnalysis): Promise<void> {
   const cache = await readCache();
-  cache[cacheKey(entry.productHash, entry.provider, entry.model)] = entry;
+  cache[cacheKey(entry.contentHash, entry.provider, entry.model)] = entry;
 
   // Evict oldest entries if over capacity.
   const entries = Object.entries(cache);
